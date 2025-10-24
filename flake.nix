@@ -6,6 +6,8 @@
     devShells."aarch64-darwin".default = pkgs.mkShell {
       buildInputs = with pkgs; [
         python3
+        python313Packages.pyphen
+        just
       ];
     };
   };
