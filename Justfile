@@ -1,3 +1,5 @@
+nice: format
+
 format: format-md
 
 format-md:
