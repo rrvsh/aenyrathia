@@ -11,7 +11,7 @@ format-py:
   ruff format
 
 format-md:
-  python utils/format-md.py
+  python src/utils/format-md.py
 
 roll *ARGS:
-  python utils/roll.py {{ ARGS }}
+  python src/utils/roll.py {{ ARGS }}
