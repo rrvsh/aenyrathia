@@ -1,1 +1,1 @@
-- Write a formatter that locks to 80 character by whitespace
+- write a tool to calculate the action probabilities
