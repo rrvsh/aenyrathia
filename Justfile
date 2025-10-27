@@ -3,4 +3,7 @@ nice: format
 format: format-md
 
 format-md:
-  nix develop -c python utils/format-md.py
+  python utils/format-md.py
+
+roll:
+  python utils/roll.py
