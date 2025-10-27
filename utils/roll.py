@@ -54,10 +54,13 @@ max_size, sides = DicePool.parse_notation(args.notation)
 for size in range(1, max_size + 1):
     counter = Counter()
     notation = f"{size}d{sides}"
+    print("===")
+    print(f"Stats for {notation} over {args.rolls} rolls:")
+
     for roll_number in range(args.rolls):
         counter[DicePool(size, sides).get_highest_number()] += 1
-    probabilities = {}
+
     for side_number in range(1, sides + 1):
-        probability = int((counter[side_number] / args.rolls) * 100)
-        probabilities[side_number] = f"{probability}%"
-    print(f"highest number probability for {notation}: {probabilities}")
+        probability = counter[side_number] / args.rolls
+        bar = "█" * int(probability * 100)
+        print(f"{side_number}: {bar} {int(probability * 100)}%")
