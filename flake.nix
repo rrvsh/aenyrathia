@@ -8,6 +8,7 @@
         python3
         python313Packages.pyphen
         just
+        ruff
       ];
     };
   };
