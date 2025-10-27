@@ -1,16 +1,17 @@
 # /usr/bin/env python
+from collections import Counter
 from random import randint
 from re import fullmatch
 from argparse import ArgumentParser
-from typing import Iterable, Mapping, Tuple
+from typing import Mapping, Tuple
 
 
-class Dice:
+class DicePool:
     """
     _rolls is a map of index (which die in the pool) to result (what number on the die)
     """
 
-    number: int
+    size: int
     sides: int
 
     @classmethod
@@ -18,49 +19,41 @@ class Dice:
         match = fullmatch(r"(\d*)d(\d+)", encoded)
         if match is None:
             raise ValueError(f"Invalid dice format: {encoded}")
-        number_string, sides_string = match.groups()
-        if number_string is not None:
-            number = int(number_string)
+        size, sides = match.groups()
+        if size is not None:
+            size = int(size)
         else:
-            number = 1
-        return (number, int(sides_string))
+            size = 1
+        return (size, int(sides))
 
     @classmethod
     def from_notation(cls, encoded: str):
-        number, sides = cls.parse_notation(encoded)
-        return cls(number, sides)
+        size, sides = cls.parse_notation(encoded)
+        return cls(size, sides)
 
-    def __init__(self, number: int, sides: int):
-        self.number = number
+    def __init__(self, size: int, sides: int):
+        self.size = size
         self.sides = sides
 
     def get_rolls(self) -> Mapping[int, int]:
-        return {index: randint(1, self.sides) for index in range(self.number)}
+        return {index: randint(1, self.sides) for index in range(self.size)}
 
     def get_total(self) -> int:
-        rolls: Iterable[int] = self.get_rolls().values()
-        return sum(rolls)
+        return sum(self.get_rolls().values())
 
     def get_highest_number(self) -> int:
-        rolls: Iterable[int] = self.get_rolls().values()
-        return max(rolls)
+        return max(self.get_rolls().values())
 
 
 parser = ArgumentParser()
 parser.add_argument("notation", type=str)
 parser.add_argument("rolls", type=int)
 args = parser.parse_args()
-number, sides = Dice.parse_notation(args.notation)
+max_size, sides = DicePool.parse_notation(args.notation)
 
-for i in range(1, number + 1):
-    total = 0
-    highest_number_total = 0
-    sample_size = f"{i}d{sides} over {args.rolls} rolls"
-
-    for _ in range(args.rolls):
-        total += Dice(i, sides).get_total()
-        highest_number_total += Dice(i, sides).get_highest_number()
-    print(f"average result of {sample_size}: {round(total / args.rolls, 2)}")
-    print(
-        f"average highest number rolled from {sample_size}: {round(highest_number_total / args.rolls, 2)}"
-    )
+for size in range(1, max_size + 1):
+    counter = Counter()
+    notation = f"{size}d{sides}"
+    for roll_number in range(args.rolls):
+        counter[DicePool(size, sides).get_highest_number()] += 1
+    print(f"highest number probabilities for {notation}: {counter}")
