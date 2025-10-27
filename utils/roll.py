@@ -56,4 +56,8 @@ for size in range(1, max_size + 1):
     notation = f"{size}d{sides}"
     for roll_number in range(args.rolls):
         counter[DicePool(size, sides).get_highest_number()] += 1
-    print(f"highest number probabilities for {notation}: {counter}")
+    probabilities = {}
+    for side_number in range(1, sides + 1):
+        probability = int((counter[side_number] / args.rolls) * 100)
+        probabilities[side_number] = f"{probability}%"
+    print(f"highest number probability for {notation}: {probabilities}")
