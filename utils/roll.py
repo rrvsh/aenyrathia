@@ -41,6 +41,10 @@ class Dice:
         rolls: Iterable[int] = self.get_rolls().values()
         return sum(rolls)
 
+    def get_highest_number(self) -> int:
+        rolls: Iterable[int] = self.get_rolls().values()
+        return max(rolls)
+
 
 parser = ArgumentParser()
 parser.add_argument("notation", type=str)
@@ -50,8 +54,13 @@ number, sides = Dice.parse_notation(args.notation)
 
 for i in range(1, number + 1):
     total = 0
+    highest_number_total = 0
+    sample_size = f"{i}d{sides} over {args.rolls} rolls"
+
     for _ in range(args.rolls):
         total += Dice(i, sides).get_total()
+        highest_number_total += Dice(i, sides).get_highest_number()
+    print(f"average result of {sample_size}: {round(total / args.rolls, 2)}")
     print(
-        f"average result of {i}d{sides} over {args.rolls} rolls: {round(total / args.rolls, 2)}"
+        f"average highest number rolled from {sample_size}: {round(highest_number_total / args.rolls, 2)}"
     )
