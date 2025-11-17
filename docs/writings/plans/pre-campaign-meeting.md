@@ -5,13 +5,13 @@ and themes -> specific names
 - but still promote it!
 - what do i wanna get out of this campaign?
 - what do you each want to get out of this campaign?
-    - reminder: you should be actively and proactively telling me and the rest what
+- reminder: you should be actively and proactively telling me and the rest what
 you want
-    - use statements like "i really want to play a music-based character" and the
+- use statements like "i really want to play a music-based character" and the
 rest of us will operate with that assumption
-    - just like how i say i want a more grounded tone and you all purposely do not
+- just like how i say i want a more grounded tone and you all purposely do not
 behave too silly to make me have more fun
-    - same thing you should be doing so you have more fun
+- same thing you should be doing so you have more fun
 
 - cover campaign
 - how we railroad vs sandbox
@@ -30,15 +30,19 @@ minor:
 - the small moments are what we should never forget -> FUN ABOVE ALL
 - especially the roleplay and character dynamics
 - IMMERSION IS IMPT
-    - rolling during combat and the combat minigame weighs down immersion
-    - overly specific rules was definitely immersion breaking
+- rolling during combat and the combat minigame weighs down immersion
+- overly specific rules was definitely immersion breaking
 - wrap up/final thoughts/reflection on the session/scene events
 - scene descriptions
-    - describe the aural senses more
+- describe the aural senses more
 - more opportunities to fantasize, imagine -> questions/queries?
 - allow them to ideate and act as a creative lead
 - pose questions to the character and the player -> avoid in game
-- definition of heroic? need the definition to properly portray the heroic ideal?
-- reduce friction before contributing by deepening base understanding of the world
-- should summarise all the information after each session that was said about the world and add it to the wiki
-- wrap up sessions at the end by documenting all information about the session, incl scenes, events, worldbuilding, etc
+- definition of heroic? need the definition to properly portray the heroic
+ideal?
+- reduce friction before contributing by deepening base understanding of the
+world
+- should summarise all the information after each session that was said about
+the world and add it to the wiki
+- wrap up sessions at the end by documenting all information about the session,
+incl scenes, events, worldbuilding, etc
