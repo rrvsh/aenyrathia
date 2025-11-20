@@ -13,10 +13,11 @@
         {
           devShells.default = pkgs.mkShell {
             buildInputs = with pkgs; [
+              cargo
+              clippy
+              rustfmt
               just
-              python3
-              python313Packages.pyphen
-              ruff
+              rustc
             ];
           };
         };
