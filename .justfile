@@ -1,8 +1,16 @@
-lint: 
+nice: format lint
+
+lint:
   cargo clippy --fix --allow-dirty
+
 format:
   cargo fmt
-run:
-  cargo run
+
+roll *ARGS:
+  cargo run -- roll {{ARGS}}
+
+run *ARGS:
+  cargo run -- {{ARGS}}
+
 build:
   cargo build
