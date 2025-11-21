@@ -1,17 +1,16 @@
 nice: format lint
 
-lint: lint-py
+lint:
+  cargo clippy --fix --allow-dirty
 
-lint-py:
-  ruff check --fix
-
-format: format-py format-md
-
-format-py:
-  ruff format
-
-format-md:
-  python src/utils/format-md.py
+format:
+  cargo fmt
 
 roll *ARGS:
-  python src/utils/roll.py {{ ARGS }}
+  cargo run -- roll {{ARGS}}
+
+run *ARGS:
+  cargo run -- {{ARGS}}
+
+build:
+  cargo build
