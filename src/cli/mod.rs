@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
-mod roll;
 mod render;
+mod roll;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -14,7 +14,7 @@ struct Cli {
 enum Commands {
     /// Rolls some dice
     Roll(roll::RollArgs),
-    /// Renders markdown to HTML
+    /// Renders a given markdown file to HTML
     Render(render::RenderArgs),
 }
 
