@@ -1,5 +1,5 @@
 use clap::Args;
-use pinbreak::Markdown;
+use pinbreak::domain::markdown::Markdown;
 use std::io;
 
 #[derive(Args)]
