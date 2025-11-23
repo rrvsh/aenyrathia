@@ -14,3 +14,6 @@ run *ARGS:
 
 build:
   cargo build
+
+render *ARGS:
+  cargo run -- render {{ARGS}}

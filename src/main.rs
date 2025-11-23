@@ -1,5 +1,6 @@
+use std::io;
 mod cli;
 
-fn main() {
-    cli::run();
+fn main() -> io::Result<()> {
+    cli::run()
 }
