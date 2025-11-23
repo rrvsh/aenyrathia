@@ -1,6 +1,6 @@
 use clap::Args;
-use markdown::to_html;
-use std::fs;
+use pinbreak::Markdown;
+use std::io;
 
 #[derive(Args)]
 pub struct RenderArgs {
@@ -9,11 +9,8 @@ pub struct RenderArgs {
 }
 
 impl RenderArgs {
-    pub fn run(&self) {
-        let read_result = fs::read_to_string(&self.path);
-        match read_result {
-            Ok(content) => println!("{}", to_html(&content)),
-            Err(e) => println!("{e}"),
-        }
+    pub fn run(&self) -> io::Result<()> {
+        println!("{}", Markdown::from_path(&self.path)?.as_html());
+        Ok(())
     }
 }

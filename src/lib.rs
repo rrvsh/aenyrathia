@@ -1,4 +1,8 @@
+use markdown::to_html;
 use rand::Rng;
+use std::fs;
+use std::io;
+use std::path::Path;
 
 pub struct DicePool {
     pub amount: u32,
@@ -25,5 +29,22 @@ impl DicePool {
     #[must_use]
     pub fn average_over(&self, times: u32) -> u32 {
         self.roll_mult(times) / times
+    }
+}
+
+pub struct Markdown {
+    content: String,
+}
+
+impl Markdown {
+    #[must_use]
+    pub fn as_html(&self) -> String {
+        to_html(&self.content)
+    }
+    /// # Errors
+    /// Will return Err if the file content cannot be read.
+    pub fn from_path<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+        let content = fs::read_to_string(path)?;
+        Ok(Self { content })
     }
 }

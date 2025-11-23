@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::io;
 
 mod render;
 mod roll;
@@ -18,10 +19,11 @@ enum Commands {
     Render(render::RenderArgs),
 }
 
-pub fn run() {
+pub fn run() -> io::Result<()> {
     let cli = Cli::parse();
     match &cli.command {
         Commands::Roll(args) => args.run(),
-        Commands::Render(args) => args.run(),
+        Commands::Render(args) => args.run()?,
     }
+    Ok(())
 }
