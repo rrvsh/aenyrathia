@@ -14,6 +14,7 @@ clap = { version = "4.5.53", features = ["derive"] }
 ignore = "0.4.25"
 markdown = "1.0.0"
 rand = "0.9.2"
+titlecase = "3.6.0"
 
 [lints.clippy]
 correctness = "deny"
@@ -24,3 +25,4 @@ style = "deny"
 pedantic = "deny"
 cargo = "deny"
 nursery = "deny"
+unwrap_used = "deny"
