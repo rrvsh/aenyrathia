@@ -3,6 +3,7 @@ use std::io;
 
 mod render;
 mod roll;
+mod scan;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -17,6 +18,8 @@ enum Commands {
     Roll(roll::RollArgs),
     /// Renders a given markdown file to HTML
     Render(render::RenderArgs),
+    /// Scans a directory and lists the files and folders within
+    Scan(scan::ScanArgs),
 }
 
 pub fn run() -> io::Result<()> {
@@ -24,6 +27,7 @@ pub fn run() -> io::Result<()> {
     match &cli.command {
         Commands::Roll(args) => args.run(),
         Commands::Render(args) => args.run()?,
+        Commands::Scan(args) => args.run(),
     }
     Ok(())
 }

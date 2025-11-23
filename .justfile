@@ -17,3 +17,6 @@ build:
 
 render *ARGS:
   cargo run -- render {{ARGS}}
+
+scan *ARGS:
+  cargo run -- scan {{ARGS}}
