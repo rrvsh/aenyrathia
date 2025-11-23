@@ -14,6 +14,7 @@ impl DicePool {
         }
         result
     }
+    #[must_use]
     pub fn roll_mult(&self, times: u32) -> u32 {
         let mut result = 0;
         for _ in 0..times {
@@ -21,6 +22,7 @@ impl DicePool {
         }
         result
     }
+    #[must_use]
     pub fn average_over(&self, times: u32) -> u32 {
         self.roll_mult(times) / times
     }
