@@ -12,3 +12,13 @@ categories = ["command-line-utilities"]
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
 rand = "0.9.2"
+
+[lints.clippy]
+correctness = "deny"
+suspicious = "deny"
+complexity = "deny"
+perf = "deny"
+style = "deny"
+pedantic = "deny"
+cargo = "deny"
+nursery = "deny"
