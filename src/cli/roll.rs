@@ -1,5 +1,5 @@
 use clap::Args;
-use pinbreak::DicePool;
+use pinbreak::domain::dice::DicePool;
 
 #[derive(Args)]
 pub struct RollArgs {
