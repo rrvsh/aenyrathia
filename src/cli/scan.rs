@@ -1,5 +1,5 @@
 use clap::Args;
-use pinbreak::domain::filetree::pretty_print_dir;
+use pinbreak::domain::filetree::Directory;
 
 #[derive(Args)]
 pub struct ScanArgs {
@@ -9,6 +9,6 @@ pub struct ScanArgs {
 
 impl ScanArgs {
     pub fn run(&self) {
-        pretty_print_dir(&self.path);
+        Directory::from_path(&self.path).pretty_print();
     }
 }
