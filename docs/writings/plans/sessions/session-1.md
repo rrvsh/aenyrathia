@@ -24,10 +24,11 @@ scene 4:
 
 scene 5:
 - next day, all somewhere when an incursion happens
-- they have to get the townsfolk in the area to safety
+- they have to get the citizens in the area to safety
 - they have to fight the incursion
 - their identity is at risk, they have to find ways to cover it up
 
 scene 6:
 - either sage or one of their friends contacts them about how the news and micromedia is responding
+- might include the debut of the team in public
 - the party has to come up with a team name
