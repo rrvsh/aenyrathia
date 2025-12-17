@@ -1,4 +1,5 @@
 use clap::Args;
+use log::info;
 use markdown::to_html;
 use std::fs;
 use std::io;
@@ -12,7 +13,7 @@ pub struct RenderArgs {
 impl RenderArgs {
     pub fn run(&self) -> io::Result<()> {
         let content = fs::read_to_string(&self.path)?;
-        println!("{}", to_html(&content));
+        info!("{}", to_html(&content));
         Ok(())
     }
 }
