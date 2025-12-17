@@ -2,7 +2,6 @@ use clap::{Parser, Subcommand};
 use std::io;
 
 mod render;
-mod roll;
 mod serve;
 
 #[derive(Parser)]
@@ -14,8 +13,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Rolls some dice
-    Roll(roll::RollArgs),
     /// Renders a given markdown file to HTML
     Render(render::RenderArgs),
     /// Serves the app
@@ -25,7 +22,6 @@ enum Commands {
 pub fn run() -> io::Result<()> {
     let cli = Cli::parse();
     match &cli.command {
-        Commands::Roll(args) => args.run(),
         Commands::Render(args) => args.run()?,
         Commands::Serve(_) => serve::ServeArgs::run(),
     }
