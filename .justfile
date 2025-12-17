@@ -17,3 +17,6 @@ build:
 
 render *ARGS:
   cargo run -- render {{ARGS}}
+
+serve *ARGS:
+  cargo run -- serve {{ARGS}}
