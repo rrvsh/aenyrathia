@@ -1,4 +1,6 @@
+use askama::Template;
 use axum::Router;
+use axum::http::StatusCode;
 use axum::routing::get;
 use clap::Args;
 
@@ -15,6 +17,15 @@ impl ServeArgs {
     }
 }
 
-async fn hello() -> String {
-    "Hello, World!".to_string()
+#[derive(Template)]
+#[template(path = "hello.html")]
+struct HelloTemplate<'a> {
+    name: &'a str,
+}
+
+async fn hello() -> Result<String, StatusCode> {
+    let template = HelloTemplate { name: "world" };
+    template
+        .render()
+        .map_or_else(|_| Err(StatusCode::INTERNAL_SERVER_ERROR), Ok)
 }
