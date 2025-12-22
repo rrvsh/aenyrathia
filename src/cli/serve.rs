@@ -5,8 +5,7 @@ use axum::http::StatusCode;
 use axum::response::Html;
 use axum::routing::get;
 use clap::Args;
-use log::info;
-use log::warn;
+use log::{error, info, trace, warn};
 use markdown::to_html;
 use std::fs;
 
@@ -70,8 +69,9 @@ async fn edit_get(Path(article_path): Path<String>) -> Result<Html<String>, Stat
     // note: article_path resolves without preceding slash
     let wiki_directory = "wiki/".to_string();
     let file_path = wiki_directory + &article_path + ".md";
-    info!("Rendering template for /edit/{file_path}");
+    trace!("Rendering template for /edit/{file_path}.");
     if !parent_directory_exists(&file_path) {
+        warn!("Parent directory doesn't exist for {file_path}.");
         return Err(StatusCode::NOT_FOUND);
     }
     fs::read_to_string(&file_path).map_or_else(
@@ -80,14 +80,14 @@ async fn edit_get(Path(article_path): Path<String>) -> Result<Html<String>, Stat
             Err(StatusCode::NOT_FOUND)
         },
         |file_content| {
-            info!("file_content for {file_path}: {file_content}");
+            trace!("file_content for {file_path}: {file_content}");
             EditorTemplate { file_content }.render().map_or_else(
                 |e| {
-                    warn!("Error rendering template for {file_path}: {e}");
+                    error!("Error rendering template for {file_path}: {e}");
                     Err(StatusCode::INTERNAL_SERVER_ERROR)
                 },
                 |rendered| {
-                    info!("rendered html for /edit/wiki/{article_path}: {rendered}");
+                    trace!("rendered html for /edit/wiki/{article_path}: {rendered}");
                     Ok(Html(rendered))
                 },
             )
