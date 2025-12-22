@@ -1,9 +1,8 @@
-<!DOCTYPE html>
-<html>
-  <body>
-    <form method="post">
-      <textarea name="markdown" rows="12" cols="80">{{ file_content }}</textarea>
-      <button>Send</button>
-    </form>
-  </body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+  <form method="post">
+    <textarea name="markdown" rows="12" cols="80">{{ file_content }}</textarea>
+    <button>Send</button>
+  </form>
+{% endblock %}
