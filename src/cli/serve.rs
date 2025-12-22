@@ -5,9 +5,10 @@ use axum::http::StatusCode;
 use axum::response::Html;
 use axum::routing::get;
 use clap::Args;
-use log::{error, info, trace, warn};
+use log::{debug, error, info, trace, warn};
 use markdown::to_html;
 use std::fs;
+use std::path::{self, PathBuf};
 
 #[derive(Args)]
 pub struct ServeArgs {}
@@ -67,23 +68,24 @@ struct EditorTemplate {
 
 async fn edit_get(Path(article_path): Path<String>) -> Result<Html<String>, StatusCode> {
     // note: article_path resolves without preceding slash
-    let wiki_directory = "wiki/".to_string();
-    let file_path = wiki_directory + &article_path + ".md";
-    trace!("Rendering template for /edit/{file_path}.");
-    if !parent_directory_exists(&file_path) {
-        warn!("Parent directory doesn't exist for {file_path}.");
+    let path = PathBuf::from("wiki")
+        .join(&article_path)
+        .with_extension("md");
+    trace!("Rendering template for /edit/{}.", path.display());
+    if !path_editable(&path) {
+        debug!("{} not editable.", path.display());
         return Err(StatusCode::NOT_FOUND);
     }
-    fs::read_to_string(&file_path).map_or_else(
+    fs::read_to_string(&path).map_or_else(
         |e| {
-            warn!("Couldn't read {file_path} to string: {e}");
+            warn!("Couldn't read {} to string: {}", path.display(), e);
             Err(StatusCode::NOT_FOUND)
         },
         |file_content| {
-            trace!("file_content for {file_path}: {file_content}");
+            trace!("file_content for {}: {}", path.display(), file_content);
             EditorTemplate { file_content }.render().map_or_else(
                 |e| {
-                    error!("Error rendering template for {file_path}: {e}");
+                    error!("Error rendering template for {}: {}", path.display(), e);
                     Err(StatusCode::INTERNAL_SERVER_ERROR)
                 },
                 |rendered| {
@@ -95,6 +97,10 @@ async fn edit_get(Path(article_path): Path<String>) -> Result<Html<String>, Stat
     )
 }
 
-const fn parent_directory_exists(_file_path: &str) -> bool {
-    true
+/// Checks if a file path is editable by checking if any of the following conditions are true:
+/// 1. The file already exists and is not a directory
+/// 2. The parent directory exists
+fn path_editable<P: AsRef<path::Path>>(path: P) -> bool {
+    let path = path.as_ref();
+    path.is_file() || path.parent().is_some_and(path::Path::is_dir)
 }
