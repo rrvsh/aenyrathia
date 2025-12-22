@@ -1,12 +1,13 @@
 use askama::Template;
 use axum::Router;
-use axum::extract::Path;
+use axum::extract::{Form, Path};
 use axum::http::StatusCode;
 use axum::response::{Html, Redirect};
 use axum::routing::get;
 use clap::Args;
 use log::{debug, error, info, trace, warn};
 use markdown::to_html;
+use serde::Deserialize;
 use std::fs;
 use std::path::{self, PathBuf};
 
@@ -105,7 +106,34 @@ fn path_editable<P: AsRef<path::Path>>(path: P) -> bool {
     path.is_file() || path.parent().is_some_and(path::Path::is_dir)
 }
 
-async fn edit_post(Path(article_path): Path<String>) -> Result<Redirect, StatusCode> {
-    let wiki_path = "/wiki/".to_owned() + &article_path;
-    Ok(Redirect::to(&wiki_path))
+#[derive(Deserialize)]
+struct EditForm {
+    markdown: String,
+}
+
+fn normalise_newlines(input: &str) -> String {
+    input.replace("\r\n", "\n").replace('\r', "\n")
+}
+
+async fn edit_post(
+    Path(article_path): Path<String>,
+    Form(form): Form<EditForm>,
+) -> Result<Redirect, StatusCode> {
+    let path = PathBuf::from("wiki")
+        .join(&article_path)
+        .with_extension("md");
+    if !path_editable(&path) {
+        debug!("{} not editable.", path.display());
+        return Err(StatusCode::NOT_FOUND);
+    }
+    fs::write(&path, normalise_newlines(&form.markdown)).map_or_else(
+        |e| {
+            warn!("Couldn't write to file {}: {}", path.display(), e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        },
+        |()| {
+            let wiki_path = "/wiki/".to_owned() + &article_path;
+            Ok(Redirect::to(&wiki_path))
+        },
+    )
 }
