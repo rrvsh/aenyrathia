@@ -21,6 +21,7 @@ impl ServeArgs {
     pub async fn run() {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
         let router = Router::new()
+            .route("/login", get(login_get).post(login_post))
             .route("/wiki", get(wiki_index))
             .route("/wiki/{*article_path}", get(wiki_page))
             .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post));
@@ -29,6 +30,31 @@ impl ServeArgs {
         info!("Starting axum router and listening on 0.0.0.0:3000");
         axum::serve(listener, app).await.unwrap();
     }
+}
+
+#[derive(Template)]
+#[template(path = "login.html")]
+struct LoginTemplate {}
+
+async fn login_get() -> Result<Html<String>, StatusCode> {
+    LoginTemplate {}.render().map_or_else(
+        |e| {
+            warn!("Error rendering template for /login: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        },
+        |rendered| Ok(Html(rendered)),
+    )
+}
+
+#[derive(Deserialize, Debug)]
+struct LoginForm {
+    username: String,
+}
+
+async fn login_post(Form(form): Form<LoginForm>) -> Result<Redirect, StatusCode> {
+    // get the username passed in and store it as a cookie
+    info!("username: {}", form.username);
+    Ok(Redirect::to("/wiki"))
 }
 
 #[derive(Template)]
