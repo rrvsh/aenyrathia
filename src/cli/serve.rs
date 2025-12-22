@@ -2,7 +2,7 @@ use askama::Template;
 use axum::Router;
 use axum::extract::Path;
 use axum::http::StatusCode;
-use axum::response::Html;
+use axum::response::{Html, Redirect};
 use axum::routing::get;
 use clap::Args;
 use log::{debug, error, info, trace, warn};
@@ -22,7 +22,7 @@ impl ServeArgs {
             listener,
             Router::new()
                 .route("/wiki/{*article_path}", get(wiki_page))
-                .route("/edit/wiki/{*article_path}", get(edit_get)),
+                .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post)),
         )
         .await
         .unwrap();
@@ -103,4 +103,9 @@ async fn edit_get(Path(article_path): Path<String>) -> Result<Html<String>, Stat
 fn path_editable<P: AsRef<path::Path>>(path: P) -> bool {
     let path = path.as_ref();
     path.is_file() || path.parent().is_some_and(path::Path::is_dir)
+}
+
+async fn edit_post(Path(article_path): Path<String>) -> Result<Redirect, StatusCode> {
+    let wiki_path = "/wiki/".to_owned() + &article_path;
+    Ok(Redirect::to(&wiki_path))
 }
