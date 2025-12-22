@@ -1,7 +1,7 @@
 [package]
 name = "pinbreak"
 version = "0.1.0-alpha"
-description = "CLI tool to roll dice and render markdown files (for now)"
+description = "CLI tool to render markdown files and serve a browsable/editable wiki"
 edition = "2024"
 readme = "docs/README.md"
 repository = "https://github.com/rrvsh/pinbreak"
