@@ -10,6 +10,7 @@ use markdown::to_html;
 use serde::Deserialize;
 use std::fs;
 use std::path::{self, PathBuf};
+use tower_http::services::ServeDir;
 
 #[derive(Args)]
 pub struct ServeArgs {}
@@ -23,7 +24,8 @@ impl ServeArgs {
             listener,
             Router::new()
                 .route("/wiki/{*article_path}", get(wiki_page))
-                .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post)),
+                .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post))
+                .nest_service("/static", ServeDir::new("static")),
         )
         .await
         .unwrap();

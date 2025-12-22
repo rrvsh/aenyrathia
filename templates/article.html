@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-  {{ content|safe }}
+  <div id="rendered-markdown">
+    {{ content|safe }}
+  </div>
 {% endblock %}
