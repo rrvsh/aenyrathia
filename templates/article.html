@@ -1,6 +1,5 @@
-<!DOCTYPE html>
-<html>
-  <body>
-    {{ content|safe }}
-  </body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+  {{ content|safe }}
+{% endblock %}
