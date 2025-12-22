@@ -6,9 +6,6 @@ lint:
 format:
   cargo fmt
 
-roll *ARGS:
-  cargo run -- roll {{ARGS}}
-
 run *ARGS:
   cargo run -- {{ARGS}}
 
