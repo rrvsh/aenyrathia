@@ -22,6 +22,8 @@ impl ServeArgs {
         axum::serve(
             listener,
             Router::new()
+                .route("/wiki", get(wiki_index))
+                .route("/wiki/", get(wiki_index))
                 .route("/wiki/{*article_path}", get(wiki_page))
                 .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post)),
         )
@@ -34,6 +36,31 @@ impl ServeArgs {
 #[template(path = "article.html")]
 struct WikiArticleTemplate {
     content: String,
+}
+
+async fn wiki_index() -> Result<Html<String>, StatusCode> {
+    // note: article_path resolves without preceding slash
+    let wiki_directory = "wiki/".to_string();
+    let file_path = wiki_directory + "index.md";
+    fs::read_to_string(&file_path).map_or_else(
+        |e| {
+            warn!("Couldn't read {file_path} to string: {e}");
+            Err(StatusCode::NOT_FOUND)
+        },
+        |file_content| {
+            WikiArticleTemplate {
+                content: to_html(&file_content),
+            }
+            .render()
+            .map_or_else(
+                |e| {
+                    warn!("Error rendering template for {file_path}: {e}");
+                    Err(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+                |rendered| Ok(Html(rendered)),
+            )
+        },
+    )
 }
 
 async fn wiki_page(Path(article_path): Path<String>) -> Result<Html<String>, StatusCode> {
