@@ -38,7 +38,6 @@ struct WikiArticleTemplate {
 }
 
 async fn wiki_index() -> Result<Html<String>, StatusCode> {
-    // note: article_path resolves without preceding slash
     let wiki_directory = "wiki/".to_string();
     let file_path = wiki_directory + "index.md";
     fs::read_to_string(&file_path).map_or_else(
