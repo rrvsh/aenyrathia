@@ -1,5 +1,6 @@
 use askama::Template;
 use axum::Router;
+use axum::ServiceExt;
 use axum::extract::{Form, Path};
 use axum::http::StatusCode;
 use axum::response::{Html, Redirect};
@@ -10,6 +11,7 @@ use markdown::to_html;
 use serde::Deserialize;
 use std::fs;
 use std::path::{self, PathBuf};
+use tower_http::normalize_path::NormalizePath;
 
 #[derive(Args)]
 pub struct ServeArgs {}
@@ -18,15 +20,14 @@ impl ServeArgs {
     #[tokio::main]
     pub async fn run() {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+        let router = Router::new()
+            .route("/wiki", get(wiki_index))
+            .route("/wiki/{*article_path}", get(wiki_page))
+            .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post));
+        let app = NormalizePath::trim_trailing_slash(router);
+        let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
         info!("Starting axum router and listening on 0.0.0.0:3000");
-        axum::serve(
-            listener,
-            Router::new()
-                .route("/wiki/{*article_path}", get(wiki_page))
-                .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post)),
-        )
-        .await
-        .unwrap();
+        axum::serve(listener, app).await.unwrap();
     }
 }
 
@@ -34,6 +35,30 @@ impl ServeArgs {
 #[template(path = "article.html")]
 struct WikiArticleTemplate {
     content: String,
+}
+
+async fn wiki_index() -> Result<Html<String>, StatusCode> {
+    let wiki_directory = "wiki/".to_string();
+    let file_path = wiki_directory + "index.md";
+    fs::read_to_string(&file_path).map_or_else(
+        |e| {
+            warn!("Couldn't read {file_path} to string: {e}");
+            Err(StatusCode::NOT_FOUND)
+        },
+        |file_content| {
+            WikiArticleTemplate {
+                content: to_html(&file_content),
+            }
+            .render()
+            .map_or_else(
+                |e| {
+                    warn!("Error rendering template for {file_path}: {e}");
+                    Err(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+                |rendered| Ok(Html(rendered)),
+            )
+        },
+    )
 }
 
 async fn wiki_page(Path(article_path): Path<String>) -> Result<Html<String>, StatusCode> {
