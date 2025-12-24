@@ -22,8 +22,8 @@ impl ServeArgs {
     pub async fn run() {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
         let router = Router::new()
+            .route("/", get(wiki_index))
             .route("/login", get(login_get).post(login_post))
-            .route("/wiki", get(wiki_index))
             .route("/wiki/{*article_path}", get(wiki_page))
             .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post))
             .layer(CookieManagerLayer::new());
@@ -55,7 +55,7 @@ struct LoginForm {
 
 async fn login_post(cookies: Cookies, Form(form): Form<LoginForm>) -> Result<Redirect, StatusCode> {
     cookies.add(Cookie::new("username", form.username));
-    Ok(Redirect::to("/wiki"))
+    Ok(Redirect::to("/"))
 }
 
 #[derive(Template)]
