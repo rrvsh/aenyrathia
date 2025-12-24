@@ -61,6 +61,7 @@ async fn login_post(Form(form): Form<LoginForm>) -> Result<Redirect, StatusCode>
 #[template(path = "article.html")]
 struct WikiArticleTemplate {
     content: String,
+    username: String,
 }
 
 async fn wiki_index() -> Result<Html<String>, StatusCode> {
@@ -73,6 +74,7 @@ async fn wiki_index() -> Result<Html<String>, StatusCode> {
         },
         |file_content| {
             WikiArticleTemplate {
+                username: "rafiq".to_string(),
                 content: to_html(&file_content),
             }
             .render()
@@ -98,6 +100,7 @@ async fn wiki_page(Path(article_path): Path<String>) -> Result<Html<String>, Sta
         },
         |file_content| {
             WikiArticleTemplate {
+                username: "rafiq".to_string(),
                 content: to_html(&file_content),
             }
             .render()

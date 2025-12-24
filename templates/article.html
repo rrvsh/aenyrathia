@@ -1,5 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
+  <header>
+    {% if true %}
+    signed in as: <a href="/logout">{{ username }}</a>
+    {% else %}
+    <a href="/login">Login</a>
+    {% endif %}
+  </header>
+
   {{ content|safe }}
 {% endblock %}
