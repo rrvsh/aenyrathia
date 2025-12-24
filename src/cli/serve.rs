@@ -23,6 +23,7 @@ impl ServeArgs {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
         let router = Router::new()
             .route("/login", get(login_get).post(login_post))
+            .route("/logout", get(logout_get))
             .route("/wiki", get(wiki_index))
             .route("/wiki/{*article_path}", get(wiki_page))
             .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post))
@@ -46,6 +47,11 @@ async fn login_get() -> Result<Html<String>, StatusCode> {
         },
         |rendered| Ok(Html(rendered)),
     )
+}
+
+async fn logout_get(cookies: Cookies) -> Redirect {
+    cookies.remove(Cookie::new("username", ""));
+    Redirect::to("/wiki")
 }
 
 #[derive(Deserialize, Debug)]
