@@ -20,7 +20,11 @@ pub struct ServeArgs {}
 impl ServeArgs {
     #[tokio::main]
     pub async fn run() {
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+        let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+        let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+        let addr = format!("{host}:{port}");
+        info!("Starting axum router and listening on {addr}");
+        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
         let router = Router::new()
             .route("/login", get(login_get).post(login_post))
             .route("/logout", get(logout_get))
@@ -30,7 +34,6 @@ impl ServeArgs {
             .layer(CookieManagerLayer::new());
         let app = NormalizePath::trim_trailing_slash(router);
         let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
-        info!("Starting axum router and listening on 0.0.0.0:3000");
         axum::serve(listener, app).await.unwrap();
     }
 }
