@@ -1,5 +1,14 @@
 {% extends "base.html" %}
 
 {% block content %}
+  <header>
+    {% match username %}
+      {% when Some with (val) %}
+      signed in as: <a href="/logout">{{ val }}</a>
+      {% when None %}
+      <a href="/login">Login</a>
+    {% endmatch %}
+  </header>
+
   {{ content|safe }}
 {% endblock %}

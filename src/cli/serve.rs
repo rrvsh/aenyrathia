@@ -11,6 +11,7 @@ use markdown::to_html;
 use serde::Deserialize;
 use std::fs;
 use std::path::{self, PathBuf};
+use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
 use tower_http::normalize_path::NormalizePath;
 
 #[derive(Args)]
@@ -21,9 +22,11 @@ impl ServeArgs {
     pub async fn run() {
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
         let router = Router::new()
+            .route("/login", get(login_get).post(login_post))
             .route("/wiki", get(wiki_index))
             .route("/wiki/{*article_path}", get(wiki_page))
-            .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post));
+            .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post))
+            .layer(CookieManagerLayer::new());
         let app = NormalizePath::trim_trailing_slash(router);
         let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
         info!("Starting axum router and listening on 0.0.0.0:3000");
@@ -32,12 +35,37 @@ impl ServeArgs {
 }
 
 #[derive(Template)]
+#[template(path = "login.html")]
+struct LoginTemplate {}
+
+async fn login_get() -> Result<Html<String>, StatusCode> {
+    LoginTemplate {}.render().map_or_else(
+        |e| {
+            warn!("Error rendering template for /login: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        },
+        |rendered| Ok(Html(rendered)),
+    )
+}
+
+#[derive(Deserialize, Debug)]
+struct LoginForm {
+    username: String,
+}
+
+async fn login_post(cookies: Cookies, Form(form): Form<LoginForm>) -> Result<Redirect, StatusCode> {
+    cookies.add(Cookie::new("username", form.username));
+    Ok(Redirect::to("/wiki"))
+}
+
+#[derive(Template)]
 #[template(path = "article.html")]
 struct WikiArticleTemplate {
     content: String,
+    username: Option<String>,
 }
 
-async fn wiki_index() -> Result<Html<String>, StatusCode> {
+async fn wiki_index(cookies: Cookies) -> Result<Html<String>, StatusCode> {
     let wiki_directory = "wiki/".to_string();
     let file_path = wiki_directory + "index.md";
     fs::read_to_string(&file_path).map_or_else(
@@ -47,6 +75,7 @@ async fn wiki_index() -> Result<Html<String>, StatusCode> {
         },
         |file_content| {
             WikiArticleTemplate {
+                username: cookies.get("username").map(|c| c.value().to_string()),
                 content: to_html(&file_content),
             }
             .render()
@@ -61,7 +90,10 @@ async fn wiki_index() -> Result<Html<String>, StatusCode> {
     )
 }
 
-async fn wiki_page(Path(article_path): Path<String>) -> Result<Html<String>, StatusCode> {
+async fn wiki_page(
+    Path(article_path): Path<String>,
+    cookies: Cookies,
+) -> Result<Html<String>, StatusCode> {
     // note: article_path resolves without preceding slash
     let wiki_directory = "wiki/".to_string();
     let file_path = wiki_directory + &article_path + ".md";
@@ -72,6 +104,7 @@ async fn wiki_page(Path(article_path): Path<String>) -> Result<Html<String>, Sta
         },
         |file_content| {
             WikiArticleTemplate {
+                username: cookies.get("username").map(|c| c.value().to_string()),
                 content: to_html(&file_content),
             }
             .render()
