@@ -12,6 +12,7 @@ use serde::Deserialize;
 use std::fs;
 use std::path::{self, PathBuf};
 use std::time::Duration;
+use tempfile::{TempDir, tempdir};
 use tokio::signal;
 use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
 use tower_http::normalize_path::NormalizePath;
@@ -33,8 +34,10 @@ impl ServeArgs {
         let addr = format!("{host}:{port}");
 
         info!("Starting axum router and listening on {addr}");
+        let tempdir = tempdir().expect("Error creating temporary directory;");
+        let path = tempdir.path();
         let state = AppState {
-            wiki_dir: "wiki".to_string(),
+            wiki_dir: path.to_string_lossy().to_string(),
         };
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
         let router = Router::new()
@@ -54,16 +57,17 @@ impl ServeArgs {
         let app = NormalizePath::trim_trailing_slash(router);
         let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
         axum::serve(listener, app)
-            .with_graceful_shutdown(shutdown_signal())
+            .with_graceful_shutdown(shutdown_signal(tempdir))
             .await
             .unwrap();
     }
 }
 
-async fn shutdown_signal() {
+async fn shutdown_signal(tempdir: TempDir) {
     signal::ctrl_c()
         .await
         .expect("Failed to initalise Ctrl C signal handler.");
+    tempdir.close().expect("");
 }
 
 #[derive(Template)]
