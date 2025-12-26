@@ -11,8 +11,10 @@ use markdown::to_html;
 use serde::Deserialize;
 use std::fs;
 use std::path::{self, PathBuf};
+use std::time::Duration;
 use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
 use tower_http::normalize_path::NormalizePath;
+use tower_http::timeout::TimeoutLayer;
 
 #[derive(Args)]
 pub struct ServeArgs {}
@@ -31,7 +33,13 @@ impl ServeArgs {
             .route("/wiki", get(wiki_index))
             .route("/wiki/{*article_path}", get(wiki_page))
             .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post))
-            .layer(CookieManagerLayer::new());
+            .layer((
+                CookieManagerLayer::new(),
+                TimeoutLayer::with_status_code(
+                    StatusCode::REQUEST_TIMEOUT,
+                    Duration::from_secs(10),
+                ),
+            ));
         let app = NormalizePath::trim_trailing_slash(router);
         let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
         axum::serve(listener, app).await.unwrap();
