@@ -1,7 +1,7 @@
 use askama::Template;
 use axum::Router;
 use axum::ServiceExt;
-use axum::extract::{Form, Path};
+use axum::extract::{Form, Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, Redirect};
 use axum::routing::get;
@@ -20,13 +20,22 @@ use tower_http::timeout::TimeoutLayer;
 #[derive(Args)]
 pub struct ServeArgs {}
 
+#[derive(Clone)]
+struct AppState {
+    wiki_dir: String,
+}
+
 impl ServeArgs {
     #[tokio::main]
     pub async fn run() {
         let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
         let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
         let addr = format!("{host}:{port}");
+
         info!("Starting axum router and listening on {addr}");
+        let state = AppState {
+            wiki_dir: "wiki".to_string(),
+        };
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
         let router = Router::new()
             .route("/login", get(login_get).post(login_post))
@@ -34,6 +43,7 @@ impl ServeArgs {
             .route("/wiki", get(wiki_index))
             .route("/wiki/{*article_path}", get(wiki_page))
             .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post))
+            .with_state(state)
             .layer((
                 CookieManagerLayer::new(),
                 TimeoutLayer::with_status_code(
@@ -92,12 +102,17 @@ struct WikiArticleTemplate {
     username: Option<String>,
 }
 
-async fn wiki_index(cookies: Cookies) -> Result<Html<String>, StatusCode> {
-    let wiki_directory = "wiki/".to_string();
-    let file_path = wiki_directory + "index.md";
-    fs::read_to_string(&file_path).map_or_else(
+async fn wiki_index(
+    cookies: Cookies,
+    State(state): State<AppState>,
+) -> Result<Html<String>, StatusCode> {
+    // note: article_path resolves without preceding slash
+    let path = PathBuf::from(state.wiki_dir)
+        .join("index")
+        .with_extension("md");
+    fs::read_to_string(&path).map_or_else(
         |e| {
-            warn!("Couldn't read {file_path} to string: {e}");
+            warn!("Couldn't read {} to string: {}", path.display(), e);
             Err(StatusCode::NOT_FOUND)
         },
         |file_content| {
@@ -108,7 +123,7 @@ async fn wiki_index(cookies: Cookies) -> Result<Html<String>, StatusCode> {
             .render()
             .map_or_else(
                 |e| {
-                    warn!("Error rendering template for {file_path}: {e}");
+                    error!("Error rendering template for {}: {}", path.display(), e);
                     Err(StatusCode::INTERNAL_SERVER_ERROR)
                 },
                 |rendered| Ok(Html(rendered)),
@@ -119,14 +134,16 @@ async fn wiki_index(cookies: Cookies) -> Result<Html<String>, StatusCode> {
 
 async fn wiki_page(
     Path(article_path): Path<String>,
+    State(state): State<AppState>,
     cookies: Cookies,
 ) -> Result<Html<String>, StatusCode> {
     // note: article_path resolves without preceding slash
-    let wiki_directory = "wiki/".to_string();
-    let file_path = wiki_directory + &article_path + ".md";
-    fs::read_to_string(&file_path).map_or_else(
+    let path = PathBuf::from(state.wiki_dir)
+        .join(&article_path)
+        .with_extension("md");
+    fs::read_to_string(&path).map_or_else(
         |e| {
-            warn!("Couldn't read {file_path} to string: {e}");
+            warn!("Couldn't read {} to string: {}", path.display(), e);
             Err(StatusCode::NOT_FOUND)
         },
         |file_content| {
@@ -137,7 +154,7 @@ async fn wiki_page(
             .render()
             .map_or_else(
                 |e| {
-                    warn!("Error rendering template for {file_path}: {e}");
+                    error!("Error rendering template for {}: {}", path.display(), e);
                     Err(StatusCode::INTERNAL_SERVER_ERROR)
                 },
                 |rendered| Ok(Html(rendered)),
@@ -152,9 +169,12 @@ struct EditorTemplate {
     file_content: String,
 }
 
-async fn edit_get(Path(article_path): Path<String>) -> Result<Html<String>, StatusCode> {
+async fn edit_get(
+    Path(article_path): Path<String>,
+    State(state): State<AppState>,
+) -> Result<Html<String>, StatusCode> {
     // note: article_path resolves without preceding slash
-    let path = PathBuf::from("wiki")
+    let path = PathBuf::from(state.wiki_dir)
         .join(&article_path)
         .with_extension("md");
     trace!("Rendering template for /edit/{}.", path.display());
@@ -202,9 +222,10 @@ fn normalise_newlines(input: &str) -> String {
 
 async fn edit_post(
     Path(article_path): Path<String>,
+    State(state): State<AppState>,
     Form(form): Form<EditForm>,
 ) -> Result<Redirect, StatusCode> {
-    let path = PathBuf::from("wiki")
+    let path = PathBuf::from(state.wiki_dir)
         .join(&article_path)
         .with_extension("md");
     if !path_editable(&path) {
