@@ -187,9 +187,22 @@ async fn edit_get(
         return Err(StatusCode::NOT_FOUND);
     }
     fs::read_to_string(&path).map_or_else(
-        |e| {
-            warn!("Couldn't read {} to string: {}", path.display(), e);
-            Err(StatusCode::NOT_FOUND)
+        |_| {
+            trace!("file not found at {}: creating new file", path.display());
+            EditorTemplate {
+                file_content: String::new(),
+            }
+            .render()
+            .map_or_else(
+                |e| {
+                    error!("Error rendering template for {}: {}", path.display(), e);
+                    Err(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+                |rendered| {
+                    trace!("rendered html for /edit/wiki/{article_path}: {rendered}");
+                    Ok(Html(rendered))
+                },
+            )
         },
         |file_content| {
             trace!("file_content for {}: {}", path.display(), file_content);
