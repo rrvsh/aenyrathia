@@ -12,6 +12,7 @@ use serde::Deserialize;
 use std::fs;
 use std::path::{self, PathBuf};
 use std::time::Duration;
+use tokio::signal;
 use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
 use tower_http::normalize_path::NormalizePath;
 use tower_http::timeout::TimeoutLayer;
@@ -42,8 +43,17 @@ impl ServeArgs {
             ));
         let app = NormalizePath::trim_trailing_slash(router);
         let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
-        axum::serve(listener, app).await.unwrap();
+        axum::serve(listener, app)
+            .with_graceful_shutdown(shutdown_signal())
+            .await
+            .unwrap();
     }
+}
+
+async fn shutdown_signal() {
+    signal::ctrl_c()
+        .await
+        .expect("Failed to initalise Ctrl C signal handler.");
 }
 
 #[derive(Template)]
