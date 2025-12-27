@@ -25,7 +25,7 @@ keygen:
   echo "Please add \`./secrets/deploy_aenyrathia.pub\` as a verified public key for the git remote."
 
 run-docker:
-  docker build . -t aenyrathia:latest
+  docker build . -f ./ops/Dockerfile -t aenyrathia:latest
   docker run --rm -p 3000:3000 \
     -v ./secrets/deploy_aenyrathia:/root/.ssh/id_ed25519:ro \
     -v ./secrets/known_hosts:/root/.ssh/known_hosts:ro \
