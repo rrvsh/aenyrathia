@@ -107,11 +107,13 @@ impl AppState {
                 .expect("git command failed to start")
         );
         std::process::Command::new("git")
-            .args(["config", "--global", "user.email", "git@aenyrathia.wiki"])
+            .current_dir(path)
+            .args(["config", "user.email", "git@aenyrathia.wiki"])
             .output()
             .expect("git command failed to start");
         std::process::Command::new("git")
-            .args(["config", "--global", "user.name", "aenyrathia.wiki"])
+            .current_dir(path)
+            .args(["config", "user.name", "aenyrathia.wiki"])
             .output()
             .expect("git command failed to start");
         Self {
