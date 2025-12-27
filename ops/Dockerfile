@@ -16,9 +16,9 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git openssh-client ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/target/release/pinbreak .
+COPY --from=builder /app/target/release/aenyrathia .
 ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV PB_LOG=TRACE
 EXPOSE 3000
-ENTRYPOINT ["./pinbreak", "serve"]
+ENTRYPOINT ["./aenyrathia"]
