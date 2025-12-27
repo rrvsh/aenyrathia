@@ -41,16 +41,23 @@ impl ServeArgs {
             .path()
             .to_str()
             .expect("Invalid UTF-8 in tempdir path!");
-        let mut git_cmd = std::process::Command::new("git");
         trace!(
             "`git clone {} {}` result: {:?}",
             git_remote,
             path,
-            git_cmd
+            std::process::Command::new("git")
                 .args(["clone", git_remote, path])
                 .output()
                 .expect("git command failed to start")
         );
+        std::process::Command::new("git")
+            .args(["config", "--global", "user.email", "git@aenyrathia.wiki"])
+            .output()
+            .expect("git command failed to start");
+        std::process::Command::new("git")
+            .args(["config", "--global", "user.name", "aenyrathia.wiki"])
+            .output()
+            .expect("git command failed to start");
         let wiki_dir = tempdir.path().join("wiki").to_string_lossy().to_string();
         let state = AppState { wiki_dir };
 
