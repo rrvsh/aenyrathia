@@ -11,6 +11,7 @@ use markdown::to_html;
 use serde::Deserialize;
 use std::fs;
 use std::path::{self, PathBuf};
+use std::process::Command;
 use std::time::Duration;
 use tempfile::{TempDir, tempdir};
 use tokio::signal;
@@ -126,7 +127,30 @@ async fn wiki_index(
     cookies: Cookies,
     State(state): State<AppState>,
 ) -> Result<Html<String>, StatusCode> {
-    // note: article_path resolves without preceding slash
+    trace!(
+        "Fetching from origin: {:?}",
+        Command::new("git")
+            .current_dir(&state.wiki_dir)
+            .args(["fetch", "origin"])
+            .output()
+            .expect("error running git command")
+    );
+    trace!(
+        "Checking out prime: {:?}",
+        Command::new("git")
+            .current_dir(&state.wiki_dir)
+            .args(["checkout", "prime"])
+            .output()
+            .expect("error running git command")
+    );
+    trace!(
+        "Resetting prime to origin: {:?}",
+        Command::new("git")
+            .current_dir(&state.wiki_dir)
+            .args(["reset", "--hard", "origin/prime"])
+            .output()
+            .expect("error running git command")
+    );
     let path = PathBuf::from(state.wiki_dir)
         .join("index")
         .with_extension("md");
@@ -157,7 +181,30 @@ async fn wiki_page(
     State(state): State<AppState>,
     cookies: Cookies,
 ) -> Result<Html<String>, StatusCode> {
-    // note: article_path resolves without preceding slash
+    trace!(
+        "Fetching from origin: {:?}",
+        Command::new("git")
+            .current_dir(&state.wiki_dir)
+            .args(["fetch", "origin"])
+            .output()
+            .expect("error running git command")
+    );
+    trace!(
+        "Checking out prime: {:?}",
+        Command::new("git")
+            .current_dir(&state.wiki_dir)
+            .args(["checkout", "prime"])
+            .output()
+            .expect("error running git command")
+    );
+    trace!(
+        "Resetting prime to origin: {:?}",
+        Command::new("git")
+            .current_dir(&state.wiki_dir)
+            .args(["reset", "--hard", "origin/prime"])
+            .output()
+            .expect("error running git command")
+    );
     let path = PathBuf::from(state.wiki_dir)
         .join(&article_path)
         .with_extension("md");
@@ -192,48 +239,78 @@ struct EditorTemplate {
 async fn edit_get(
     Path(article_path): Path<String>,
     State(state): State<AppState>,
+    cookies: Cookies,
 ) -> Result<Html<String>, StatusCode> {
-    // note: article_path resolves without preceding slash
-    let path = PathBuf::from(state.wiki_dir)
-        .join(&article_path)
-        .with_extension("md");
-    trace!("Rendering template for /edit/{}.", path.display());
-    if !path_editable(&path) {
-        debug!("{} not editable.", path.display());
-        return Err(StatusCode::NOT_FOUND);
+    if let Some(username) = cookies.get("username") {
+        let git_branch = format!("user/{}", username.value());
+        trace!(
+            "Fetching from origin: {:?}",
+            Command::new("git")
+                .current_dir(&state.wiki_dir)
+                .args(["fetch", "origin"])
+                .output()
+                .expect("error running git command")
+        );
+        trace!(
+            "Checking out {git_branch}: {:?}",
+            Command::new("git")
+                .current_dir(&state.wiki_dir)
+                .args(["checkout", "-B", &git_branch])
+                .output()
+                .expect("error running git command")
+        );
+        trace!(
+            "Resetting {git_branch} to origin: {:?}",
+            Command::new("git")
+                .current_dir(&state.wiki_dir)
+                .args(["reset", "--hard", &format!("origin/{git_branch}")])
+                .output()
+                .expect("error running git command")
+        );
+
+        let path = PathBuf::from(state.wiki_dir)
+            .join(&article_path)
+            .with_extension("md");
+        if !path_editable(&path) {
+            debug!("{} not editable.", path.display());
+            return Err(StatusCode::NOT_FOUND);
+        }
+        trace!("Rendering template for /edit/{}.", path.display());
+        fs::read_to_string(&path).map_or_else(
+            |_| {
+                trace!("file not found at {}: creating new file", path.display());
+                EditorTemplate {
+                    file_content: String::new(),
+                }
+                .render()
+                .map_or_else(
+                    |e| {
+                        error!("Error rendering template for {}: {}", path.display(), e);
+                        Err(StatusCode::INTERNAL_SERVER_ERROR)
+                    },
+                    |rendered| {
+                        trace!("rendered html for /edit/wiki/{article_path}: {rendered}");
+                        Ok(Html(rendered))
+                    },
+                )
+            },
+            |file_content| {
+                trace!("file_content for {}: {}", path.display(), file_content);
+                EditorTemplate { file_content }.render().map_or_else(
+                    |e| {
+                        error!("Error rendering template for {}: {}", path.display(), e);
+                        Err(StatusCode::INTERNAL_SERVER_ERROR)
+                    },
+                    |rendered| {
+                        trace!("rendered html for /edit/wiki/{article_path}: {rendered}");
+                        Ok(Html(rendered))
+                    },
+                )
+            },
+        )
+    } else {
+        Err(StatusCode::NOT_FOUND)
     }
-    fs::read_to_string(&path).map_or_else(
-        |_| {
-            trace!("file not found at {}: creating new file", path.display());
-            EditorTemplate {
-                file_content: String::new(),
-            }
-            .render()
-            .map_or_else(
-                |e| {
-                    error!("Error rendering template for {}: {}", path.display(), e);
-                    Err(StatusCode::INTERNAL_SERVER_ERROR)
-                },
-                |rendered| {
-                    trace!("rendered html for /edit/wiki/{article_path}: {rendered}");
-                    Ok(Html(rendered))
-                },
-            )
-        },
-        |file_content| {
-            trace!("file_content for {}: {}", path.display(), file_content);
-            EditorTemplate { file_content }.render().map_or_else(
-                |e| {
-                    error!("Error rendering template for {}: {}", path.display(), e);
-                    Err(StatusCode::INTERNAL_SERVER_ERROR)
-                },
-                |rendered| {
-                    trace!("rendered html for /edit/wiki/{article_path}: {rendered}");
-                    Ok(Html(rendered))
-                },
-            )
-        },
-    )
 }
 
 /// Checks if a file path is editable by checking if any of the following conditions are true:
@@ -256,23 +333,81 @@ fn normalise_newlines(input: &str) -> String {
 async fn edit_post(
     Path(article_path): Path<String>,
     State(state): State<AppState>,
+    cookies: Cookies,
     Form(form): Form<EditForm>,
 ) -> Result<Redirect, StatusCode> {
-    let path = PathBuf::from(state.wiki_dir)
-        .join(&article_path)
-        .with_extension("md");
-    if !path_editable(&path) {
-        debug!("{} not editable.", path.display());
-        return Err(StatusCode::NOT_FOUND);
+    if let Some(username) = cookies.get("username") {
+        let git_branch = format!("user/{}", username.value());
+        trace!(
+            "Fetching from origin: {:?}",
+            Command::new("git")
+                .current_dir(&state.wiki_dir)
+                .args(["fetch", "origin"])
+                .output()
+                .expect("error running git command")
+        );
+        trace!(
+            "Checking out {git_branch}: {:?}",
+            Command::new("git")
+                .current_dir(&state.wiki_dir)
+                .args(["checkout", "-B", &git_branch])
+                .output()
+                .expect("error running git command")
+        );
+        trace!(
+            "Resetting {git_branch} to origin: {:?}",
+            Command::new("git")
+                .current_dir(&state.wiki_dir)
+                .args(["reset", "--hard", &format!("origin/{git_branch}")])
+                .output()
+                .expect("error running git command")
+        );
+
+        let path = PathBuf::from(&state.wiki_dir)
+            .join(&article_path)
+            .with_extension("md");
+        if !path_editable(&path) {
+            debug!("{} not editable.", path.display());
+            return Err(StatusCode::NOT_FOUND);
+        }
+
+        fs::write(&path, normalise_newlines(&form.markdown)).map_or_else(
+            |e| {
+                warn!("Couldn't write to file {}: {}", path.display(), e);
+                Err(StatusCode::INTERNAL_SERVER_ERROR)
+            },
+            |()| {
+                trace!("Wrote to file {}", path.display());
+                trace!(
+                    "Running git add: {:?}",
+                    Command::new("git")
+                        .current_dir(&state.wiki_dir)
+                        .args(["add", path.to_str().expect("invalid UTF-8!")])
+                        .output()
+                        .expect("error running git command")
+                );
+                trace!(
+                    "Running git commit: {:?}",
+                    Command::new("git")
+                        .current_dir(&state.wiki_dir)
+                        .args(["commit", "-m", username.value()])
+                        .output()
+                        .expect("error running git command")
+                );
+                trace!(
+                    "Running git push: {:?}",
+                    Command::new("git")
+                        .current_dir(&state.wiki_dir)
+                        .args(["push", "origin", &git_branch])
+                        .output()
+                        .expect("error running git command")
+                );
+                let wiki_path = "/wiki/".to_owned() + &article_path;
+                Ok(Redirect::to(&wiki_path))
+            },
+        )
+    } else {
+        let wiki_path = "/wiki/".to_owned() + &article_path;
+        Ok(Redirect::to(&wiki_path))
     }
-    fs::write(&path, normalise_newlines(&form.markdown)).map_or_else(
-        |e| {
-            warn!("Couldn't write to file {}: {}", path.display(), e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        },
-        |()| {
-            let wiki_path = "/wiki/".to_owned() + &article_path;
-            Ok(Redirect::to(&wiki_path))
-        },
-    )
 }
