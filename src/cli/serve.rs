@@ -1,7 +1,7 @@
 use askama::Template;
 use axum::Router;
 use axum::ServiceExt;
-use axum::extract::{Form, Path};
+use axum::extract::{Form, Path, State};
 use axum::http::StatusCode;
 use axum::response::{Html, Redirect};
 use axum::routing::get;
@@ -12,6 +12,8 @@ use serde::Deserialize;
 use std::fs;
 use std::path::{self, PathBuf};
 use std::time::Duration;
+use tempfile::{TempDir, tempdir};
+use tokio::signal;
 use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
 use tower_http::normalize_path::NormalizePath;
 use tower_http::timeout::TimeoutLayer;
@@ -19,12 +21,38 @@ use tower_http::timeout::TimeoutLayer;
 #[derive(Args)]
 pub struct ServeArgs {}
 
+#[derive(Clone)]
+struct AppState {
+    wiki_dir: String,
+}
+
 impl ServeArgs {
     #[tokio::main]
     pub async fn run() {
         let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
         let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
         let addr = format!("{host}:{port}");
+
+        let git_remote = "git@github.com:rrvsh/aenyrathia.git";
+        trace!("Cloning {git_remote} into tempdir.");
+        let tempdir = tempdir().expect("Error creating temporary directory;");
+        let path = tempdir
+            .path()
+            .to_str()
+            .expect("Invalid UTF-8 in tempdir path!");
+        let mut git_cmd = std::process::Command::new("git");
+        trace!(
+            "`git clone {} {}` result: {:?}",
+            git_remote,
+            path,
+            git_cmd
+                .args(["clone", git_remote, path])
+                .output()
+                .expect("git command failed to start")
+        );
+        let wiki_dir = tempdir.path().join("wiki").to_string_lossy().to_string();
+        let state = AppState { wiki_dir };
+
         info!("Starting axum router and listening on {addr}");
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
         let router = Router::new()
@@ -33,6 +61,7 @@ impl ServeArgs {
             .route("/wiki", get(wiki_index))
             .route("/wiki/{*article_path}", get(wiki_page))
             .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post))
+            .with_state(state)
             .layer((
                 CookieManagerLayer::new(),
                 TimeoutLayer::with_status_code(
@@ -42,8 +71,19 @@ impl ServeArgs {
             ));
         let app = NormalizePath::trim_trailing_slash(router);
         let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
-        axum::serve(listener, app).await.unwrap();
+        axum::serve(listener, app)
+            .with_graceful_shutdown(shutdown_signal(tempdir))
+            .await
+            .unwrap();
     }
+}
+
+async fn shutdown_signal(tempdir: TempDir) {
+    signal::ctrl_c()
+        .await
+        .expect("Failed to initalise Ctrl C signal handler.");
+    trace!("Closing tempdir.");
+    tempdir.close().expect("");
 }
 
 #[derive(Template)]
@@ -82,12 +122,17 @@ struct WikiArticleTemplate {
     username: Option<String>,
 }
 
-async fn wiki_index(cookies: Cookies) -> Result<Html<String>, StatusCode> {
-    let wiki_directory = "wiki/".to_string();
-    let file_path = wiki_directory + "index.md";
-    fs::read_to_string(&file_path).map_or_else(
+async fn wiki_index(
+    cookies: Cookies,
+    State(state): State<AppState>,
+) -> Result<Html<String>, StatusCode> {
+    // note: article_path resolves without preceding slash
+    let path = PathBuf::from(state.wiki_dir)
+        .join("index")
+        .with_extension("md");
+    fs::read_to_string(&path).map_or_else(
         |e| {
-            warn!("Couldn't read {file_path} to string: {e}");
+            warn!("Couldn't read {} to string: {}", path.display(), e);
             Err(StatusCode::NOT_FOUND)
         },
         |file_content| {
@@ -98,7 +143,7 @@ async fn wiki_index(cookies: Cookies) -> Result<Html<String>, StatusCode> {
             .render()
             .map_or_else(
                 |e| {
-                    warn!("Error rendering template for {file_path}: {e}");
+                    error!("Error rendering template for {}: {}", path.display(), e);
                     Err(StatusCode::INTERNAL_SERVER_ERROR)
                 },
                 |rendered| Ok(Html(rendered)),
@@ -109,14 +154,16 @@ async fn wiki_index(cookies: Cookies) -> Result<Html<String>, StatusCode> {
 
 async fn wiki_page(
     Path(article_path): Path<String>,
+    State(state): State<AppState>,
     cookies: Cookies,
 ) -> Result<Html<String>, StatusCode> {
     // note: article_path resolves without preceding slash
-    let wiki_directory = "wiki/".to_string();
-    let file_path = wiki_directory + &article_path + ".md";
-    fs::read_to_string(&file_path).map_or_else(
+    let path = PathBuf::from(state.wiki_dir)
+        .join(&article_path)
+        .with_extension("md");
+    fs::read_to_string(&path).map_or_else(
         |e| {
-            warn!("Couldn't read {file_path} to string: {e}");
+            warn!("Couldn't read {} to string: {}", path.display(), e);
             Err(StatusCode::NOT_FOUND)
         },
         |file_content| {
@@ -127,7 +174,7 @@ async fn wiki_page(
             .render()
             .map_or_else(
                 |e| {
-                    warn!("Error rendering template for {file_path}: {e}");
+                    error!("Error rendering template for {}: {}", path.display(), e);
                     Err(StatusCode::INTERNAL_SERVER_ERROR)
                 },
                 |rendered| Ok(Html(rendered)),
@@ -142,9 +189,12 @@ struct EditorTemplate {
     file_content: String,
 }
 
-async fn edit_get(Path(article_path): Path<String>) -> Result<Html<String>, StatusCode> {
+async fn edit_get(
+    Path(article_path): Path<String>,
+    State(state): State<AppState>,
+) -> Result<Html<String>, StatusCode> {
     // note: article_path resolves without preceding slash
-    let path = PathBuf::from("wiki")
+    let path = PathBuf::from(state.wiki_dir)
         .join(&article_path)
         .with_extension("md");
     trace!("Rendering template for /edit/{}.", path.display());
@@ -153,9 +203,22 @@ async fn edit_get(Path(article_path): Path<String>) -> Result<Html<String>, Stat
         return Err(StatusCode::NOT_FOUND);
     }
     fs::read_to_string(&path).map_or_else(
-        |e| {
-            warn!("Couldn't read {} to string: {}", path.display(), e);
-            Err(StatusCode::NOT_FOUND)
+        |_| {
+            trace!("file not found at {}: creating new file", path.display());
+            EditorTemplate {
+                file_content: String::new(),
+            }
+            .render()
+            .map_or_else(
+                |e| {
+                    error!("Error rendering template for {}: {}", path.display(), e);
+                    Err(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+                |rendered| {
+                    trace!("rendered html for /edit/wiki/{article_path}: {rendered}");
+                    Ok(Html(rendered))
+                },
+            )
         },
         |file_content| {
             trace!("file_content for {}: {}", path.display(), file_content);
@@ -192,9 +255,10 @@ fn normalise_newlines(input: &str) -> String {
 
 async fn edit_post(
     Path(article_path): Path<String>,
+    State(state): State<AppState>,
     Form(form): Form<EditForm>,
 ) -> Result<Redirect, StatusCode> {
-    let path = PathBuf::from("wiki")
+    let path = PathBuf::from(state.wiki_dir)
         .join(&article_path)
         .with_extension("md");
     if !path_editable(&path) {
