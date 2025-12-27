@@ -53,11 +53,11 @@ impl Wiki {
     }
 
     /// Resolves `{article_path}` to `wiki/{article_path}.md`.
-    fn resolve_article_path(&self, article_path: &str) -> std::path::PathBuf {
-        let ensured_article_path = if article_path.is_empty() {
-            "index"
-        } else {
-            article_path
+    /// Defaults to `index` when `article_path` is `None` or empty.
+    pub fn resolve_article_path(&self, article_path: Option<&String>) -> std::path::PathBuf {
+        let ensured_article_path = match article_path {
+            Some(article_path) if !article_path.is_empty() => article_path,
+            _ => &"index".to_string(),
         };
         PathBuf::from(&self.repo_directory)
             .join("wiki")
@@ -65,7 +65,6 @@ impl Wiki {
             .with_extension("md")
     }
 
-    /// Switches the git repo to `branch_name`
     fn checkout_remote_branch(&self, branch_name: &str) {
         trace!("Checking out remote branch origin/{branch_name}.");
         trace!(
@@ -94,7 +93,6 @@ impl Wiki {
         );
     }
 
-    /// Rebases `branch_name`
     fn update_and_sync(&self, branch_name: &str) {
         trace!("Rebasing {branch_name} and syncing latest changes to origin.");
         trace!(
@@ -102,14 +100,6 @@ impl Wiki {
             Command::new("git")
                 .current_dir(&self.repo_directory)
                 .args(["fetch", "origin"])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "`git rebase origin/prime`: {:?}",
-            Command::new("git")
-                .current_dir(&self.repo_directory)
-                .args(["rebase", "origin/prime"])
                 .output()
                 .expect("error running git command")
         );
@@ -130,6 +120,14 @@ impl Wiki {
                 .expect("error running git command")
         );
         trace!(
+            "`git rebase origin/prime`: {:?}",
+            Command::new("git")
+                .current_dir(&self.repo_directory)
+                .args(["rebase", "origin/prime"])
+                .output()
+                .expect("error running git command")
+        );
+        trace!(
             "`git push origin {branch_name}`: {:?}",
             Command::new("git")
                 .current_dir(&self.repo_directory)
@@ -141,14 +139,13 @@ impl Wiki {
 
     pub fn update_remote_branch_file_contents(
         self,
-        article_path: &str,
+        path: &PathBuf,
         new_file_content: &str,
         branch_name: &str,
     ) -> Result<(), ()> {
         self.checkout_remote_branch(branch_name);
-        let path = self.resolve_article_path(article_path);
-        if path_editable(&path) {
-            std::fs::write(&path, new_file_content).map_or_else(
+        if path_editable(path) {
+            std::fs::write(path, new_file_content).map_or_else(
                 |e| {
                     warn!("Couldn't write to file {}: {}", path.display(), e);
                     Err(())
@@ -167,12 +164,11 @@ impl Wiki {
 
     pub fn get_remote_branch_file_contents(
         self,
-        article_path: &str,
+        path: &PathBuf,
         branch_name: &str,
     ) -> Option<String> {
         self.checkout_remote_branch(branch_name);
-        let path = self.resolve_article_path(article_path);
-        std::fs::read_to_string(&path).map_or_else(
+        std::fs::read_to_string(path).map_or_else(
             |e| {
                 warn!("Couldn't read {} to string: {}", path.display(), e);
                 None

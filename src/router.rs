@@ -11,6 +11,10 @@ pub fn build(wiki: Wiki) -> axum::Router {
         .route("/login", post(handlers::login))
         .route("/logout", get(handlers::logout))
         .route(
+            "/",
+            get(handlers::render_wiki_page).post(handlers::update_wiki_page),
+        )
+        .route(
             "/{*article_path}",
             get(handlers::render_wiki_page).post(handlers::update_wiki_page),
         )

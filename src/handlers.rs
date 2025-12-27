@@ -40,10 +40,13 @@ pub struct EditModeQuery {
 
 pub async fn render_wiki_page(
     cookies: Cookies,
-    Path(article_path): Path<String>,
+    article_path: Option<Path<String>>,
     Query(params): Query<EditModeQuery>,
     State(wiki): State<Wiki>,
 ) -> Result<Html<String>, StatusCode> {
+    let article_path = article_path.map(|Path(article_path)| article_path);
+    let file_path = wiki.resolve_article_path(article_path.as_ref());
+
     let branch_name = if params.edit_mode.unwrap_or(false) {
         cookies.get("username").map_or_else(
             || "prime".to_string(),
@@ -52,9 +55,11 @@ pub async fn render_wiki_page(
     } else {
         "prime".to_string()
     };
+
     let file_content = wiki
-        .get_remote_branch_file_contents(&article_path, &branch_name)
+        .get_remote_branch_file_contents(&file_path, &branch_name)
         .map_or_else(String::new, |file_content| file_content);
+
     ArticleTemplate {
         edit_mode: params.edit_mode.unwrap_or(false),
         username: cookies.get("username").map(|c| c.value().to_string()),
@@ -64,7 +69,10 @@ pub async fn render_wiki_page(
     .render()
     .map_or_else(
         |e| {
-            error!("Error rendering template for {article_path}: {e}");
+            error!(
+                "Error rendering template for {}: {e}",
+                article_path.unwrap_or_else(|| "/".to_string())
+            );
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         },
         |rendered| Ok(Html(rendered)),
@@ -77,22 +85,29 @@ pub struct EditForm {
 }
 
 pub async fn update_wiki_page(
-    Path(article_path): Path<String>,
+    article_path: Option<Path<String>>,
     State(wiki): State<Wiki>,
     cookies: Cookies,
     Form(form): Form<EditForm>,
 ) -> Result<Redirect, StatusCode> {
+    let article_path = article_path.map(|Path(article_path)| article_path);
+    let file_path = wiki.resolve_article_path(article_path.as_ref());
+
     if let Some(username) = cookies.get("username") {
         let git_branch = format!("user/{}", username.value());
         match wiki.update_remote_branch_file_contents(
-            &article_path,
+            &file_path,
             &normalise_newlines(&form.markdown),
             &git_branch,
         ) {
-            Ok(()) => Ok(Redirect::to(&("/".to_owned() + &article_path))),
+            Ok(()) => Ok(Redirect::to(
+                &("/".to_owned() + &article_path.unwrap_or_default()),
+            )),
             Err(()) => Err(StatusCode::NOT_FOUND),
         }
     } else {
-        Ok(Redirect::to(&("/".to_owned() + &article_path)))
+        Ok(Redirect::to(
+            &("/".to_owned() + &article_path.unwrap_or_default()),
+        ))
     }
 }
