@@ -33,12 +33,27 @@ impl ServeArgs {
         let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
         let addr = format!("{host}:{port}");
 
-        info!("Starting axum router and listening on {addr}");
+        let git_remote = "git@github.com:rrvsh/aenyrathia.git";
+        trace!("Cloning {git_remote} into tempdir.");
         let tempdir = tempdir().expect("Error creating temporary directory;");
-        let path = tempdir.path();
-        let state = AppState {
-            wiki_dir: path.to_string_lossy().to_string(),
-        };
+        let path = tempdir
+            .path()
+            .to_str()
+            .expect("Invalid UTF-8 in tempdir path!");
+        let mut git_cmd = std::process::Command::new("git");
+        trace!(
+            "`git clone {} {}` result: {:?}",
+            git_remote,
+            path,
+            git_cmd
+                .args(["clone", git_remote, path])
+                .output()
+                .expect("git command failed to start")
+        );
+        let wiki_dir = tempdir.path().join("wiki").to_string_lossy().to_string();
+        let state = AppState { wiki_dir };
+
+        info!("Starting axum router and listening on {addr}");
         let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
         let router = Router::new()
             .route("/login", get(login_get).post(login_post))
@@ -67,6 +82,7 @@ async fn shutdown_signal(tempdir: TempDir) {
     signal::ctrl_c()
         .await
         .expect("Failed to initalise Ctrl C signal handler.");
+    trace!("Closing tempdir.");
     tempdir.close().expect("");
 }
 
