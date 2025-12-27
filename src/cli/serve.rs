@@ -1,10 +1,10 @@
 use askama::Template;
 use axum::Router;
 use axum::ServiceExt;
-use axum::extract::{Form, Path, State};
+use axum::extract::{Form, Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, Redirect};
-use axum::routing::get;
+use axum::routing::{get, post};
 use clap::Args;
 use log::{debug, error, info, trace, warn};
 use markdown::to_html;
@@ -19,34 +19,90 @@ use tower_cookies::{Cookie, CookieManagerLayer, Cookies};
 use tower_http::normalize_path::NormalizePath;
 use tower_http::timeout::TimeoutLayer;
 
-#[derive(Args)]
-pub struct ServeArgs {}
+fn get_file_path(article_path: &str, wiki_dir: &str) -> std::path::PathBuf {
+    let ensured_article_path = if article_path.is_empty() {
+        "index"
+    } else {
+        article_path
+    };
+    PathBuf::from(wiki_dir)
+        .join(ensured_article_path)
+        .with_extension("md")
+}
+
+fn checkout_remote_branch(branch_name: &str, repo_directory: &str) {
+    trace!(
+        "Fetching from origin: {:?}",
+        Command::new("git")
+            .current_dir(repo_directory)
+            .args(["fetch", "origin"])
+            .output()
+            .expect("error running git command")
+    );
+    trace!(
+        "Checking out {branch_name}: {:?}",
+        Command::new("git")
+            .current_dir(repo_directory)
+            .args(["checkout", "-B", branch_name])
+            .output()
+            .expect("error running git command")
+    );
+    trace!(
+        "Resetting {branch_name} to origin: {:?}",
+        Command::new("git")
+            .current_dir(repo_directory)
+            .args(["reset", "--hard", &format!("origin/{branch_name}")])
+            .output()
+            .expect("error running git command")
+    );
+}
+
+/// Checks if a file path is editable by checking if any of the following conditions are true:
+/// 1. The file already exists and is not a directory
+/// 2. The parent directory exists
+fn path_editable<P: AsRef<path::Path>>(path: P) -> bool {
+    let path = path.as_ref();
+    path.is_file() || path.parent().is_some_and(path::Path::is_dir)
+}
+
+fn normalise_newlines(input: &str) -> String {
+    input.replace("\r\n", "\n").replace('\r', "\n")
+}
+
+struct AppSettings {
+    addr: String,
+    git_remote: String,
+}
+
+impl AppSettings {
+    fn from_env() -> Self {
+        let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+        let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+        Self {
+            addr: format!("{host}:{port}"),
+            git_remote: "git@github.com:rrvsh/aenyrathia.git".to_string(),
+        }
+    }
+}
 
 #[derive(Clone)]
 struct AppState {
     wiki_dir: String,
 }
 
-impl ServeArgs {
-    #[tokio::main]
-    pub async fn run() {
-        let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
-        let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
-        let addr = format!("{host}:{port}");
-
-        let git_remote = "git@github.com:rrvsh/aenyrathia.git";
-        trace!("Cloning {git_remote} into tempdir.");
-        let tempdir = tempdir().expect("Error creating temporary directory;");
+impl AppState {
+    fn new(settings: &AppSettings, tempdir: &TempDir) -> Self {
+        trace!("Cloning {} into tempdir.", settings.git_remote);
         let path = tempdir
             .path()
             .to_str()
             .expect("Invalid UTF-8 in tempdir path!");
         trace!(
             "`git clone {} {}` result: {:?}",
-            git_remote,
+            &settings.git_remote,
             path,
             std::process::Command::new("git")
-                .args(["clone", git_remote, path])
+                .args(["clone", &settings.git_remote, path])
                 .output()
                 .expect("git command failed to start")
         );
@@ -58,17 +114,31 @@ impl ServeArgs {
             .args(["config", "--global", "user.name", "aenyrathia.wiki"])
             .output()
             .expect("git command failed to start");
-        let wiki_dir = tempdir.path().join("wiki").to_string_lossy().to_string();
-        let state = AppState { wiki_dir };
+        Self {
+            wiki_dir: tempdir.path().join("wiki").to_string_lossy().to_string(),
+        }
+    }
+}
 
-        info!("Starting axum router and listening on {addr}");
-        let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+#[derive(Args)]
+pub struct ServeArgs {}
+
+impl ServeArgs {
+    #[tokio::main]
+    pub async fn run() {
+        let settings = AppSettings::from_env();
+        let tempdir = tempdir().expect("Error creating temporary directory;");
+        let state = AppState::new(&settings, &tempdir);
+
+        info!("Starting axum router and listening on {}", &settings.addr);
+        let listener = tokio::net::TcpListener::bind(&settings.addr).await.unwrap();
         let router = Router::new()
-            .route("/login", get(login_get).post(login_post))
-            .route("/logout", get(logout_get))
-            .route("/wiki", get(wiki_index))
-            .route("/wiki/{*article_path}", get(wiki_page))
-            .route("/edit/wiki/{*article_path}", get(edit_get).post(edit_post))
+            .route("/login", post(login))
+            .route("/logout", get(logout))
+            .route(
+                "/{*article_path}",
+                get(render_wiki_page).post(update_wiki_page),
+            )
             .with_state(state)
             .layer((
                 CookieManagerLayer::new(),
@@ -94,238 +164,76 @@ async fn shutdown_signal(tempdir: TempDir) {
     tempdir.close().expect("");
 }
 
-#[derive(Template)]
-#[template(path = "login.html")]
-struct LoginTemplate {}
-
-async fn login_get() -> Result<Html<String>, StatusCode> {
-    LoginTemplate {}.render().map_or_else(
-        |e| {
-            warn!("Error rendering template for /login: {e}");
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        },
-        |rendered| Ok(Html(rendered)),
-    )
-}
-
-async fn logout_get(cookies: Cookies) -> Redirect {
-    cookies.remove(Cookie::new("username", ""));
-    Redirect::to("/wiki")
-}
-
-#[derive(Deserialize, Debug)]
-struct LoginForm {
+#[derive(Deserialize)]
+struct LoginRequest {
     username: String,
 }
 
-async fn login_post(cookies: Cookies, Form(form): Form<LoginForm>) -> Result<Redirect, StatusCode> {
+async fn login(cookies: Cookies, Form(form): Form<LoginRequest>) -> Redirect {
     cookies.add(Cookie::new("username", form.username));
-    Ok(Redirect::to("/wiki"))
+    Redirect::to("/")
+}
+
+async fn logout(cookies: Cookies) -> Redirect {
+    cookies.remove(Cookie::new("username", ""));
+    Redirect::to("/")
 }
 
 #[derive(Template)]
 #[template(path = "article.html")]
-struct WikiArticleTemplate {
-    content: String,
+struct ArticleTemplate {
     username: Option<String>,
+    edit_mode: bool,
+    raw_file_content: String,
+    rendered_html: String,
 }
 
-async fn wiki_index(
+#[derive(Deserialize)]
+struct EditModeQuery {
+    edit_mode: Option<bool>,
+}
+
+/// Checks out the latest revision from origin/prime.
+/// Renders the requested page, or index.md if not present
+async fn render_wiki_page(
     cookies: Cookies,
-    State(state): State<AppState>,
-) -> Result<Html<String>, StatusCode> {
-    trace!(
-        "Fetching from origin: {:?}",
-        Command::new("git")
-            .current_dir(&state.wiki_dir)
-            .args(["fetch", "origin"])
-            .output()
-            .expect("error running git command")
-    );
-    trace!(
-        "Checking out prime: {:?}",
-        Command::new("git")
-            .current_dir(&state.wiki_dir)
-            .args(["checkout", "prime"])
-            .output()
-            .expect("error running git command")
-    );
-    trace!(
-        "Resetting prime to origin: {:?}",
-        Command::new("git")
-            .current_dir(&state.wiki_dir)
-            .args(["reset", "--hard", "origin/prime"])
-            .output()
-            .expect("error running git command")
-    );
-    let path = PathBuf::from(state.wiki_dir)
-        .join("index")
-        .with_extension("md");
-    fs::read_to_string(&path).map_or_else(
-        |e| {
-            warn!("Couldn't read {} to string: {}", path.display(), e);
-            Err(StatusCode::NOT_FOUND)
-        },
-        |file_content| {
-            WikiArticleTemplate {
-                username: cookies.get("username").map(|c| c.value().to_string()),
-                content: to_html(&file_content),
-            }
-            .render()
-            .map_or_else(
-                |e| {
-                    error!("Error rendering template for {}: {}", path.display(), e);
-                    Err(StatusCode::INTERNAL_SERVER_ERROR)
-                },
-                |rendered| Ok(Html(rendered)),
-            )
-        },
-    )
-}
-
-async fn wiki_page(
     Path(article_path): Path<String>,
+    Query(params): Query<EditModeQuery>,
     State(state): State<AppState>,
-    cookies: Cookies,
 ) -> Result<Html<String>, StatusCode> {
-    trace!(
-        "Fetching from origin: {:?}",
-        Command::new("git")
-            .current_dir(&state.wiki_dir)
-            .args(["fetch", "origin"])
-            .output()
-            .expect("error running git command")
-    );
-    trace!(
-        "Checking out prime: {:?}",
-        Command::new("git")
-            .current_dir(&state.wiki_dir)
-            .args(["checkout", "prime"])
-            .output()
-            .expect("error running git command")
-    );
-    trace!(
-        "Resetting prime to origin: {:?}",
-        Command::new("git")
-            .current_dir(&state.wiki_dir)
-            .args(["reset", "--hard", "origin/prime"])
-            .output()
-            .expect("error running git command")
-    );
-    let path = PathBuf::from(state.wiki_dir)
-        .join(&article_path)
-        .with_extension("md");
-    fs::read_to_string(&path).map_or_else(
-        |e| {
-            warn!("Couldn't read {} to string: {}", path.display(), e);
-            Err(StatusCode::NOT_FOUND)
-        },
-        |file_content| {
-            WikiArticleTemplate {
-                username: cookies.get("username").map(|c| c.value().to_string()),
-                content: to_html(&file_content),
-            }
-            .render()
-            .map_or_else(
-                |e| {
-                    error!("Error rendering template for {}: {}", path.display(), e);
-                    Err(StatusCode::INTERNAL_SERVER_ERROR)
-                },
-                |rendered| Ok(Html(rendered)),
-            )
-        },
-    )
-}
-
-#[derive(Template)]
-#[template(path = "editor.html")]
-struct EditorTemplate {
-    file_content: String,
-}
-
-async fn edit_get(
-    Path(article_path): Path<String>,
-    State(state): State<AppState>,
-    cookies: Cookies,
-) -> Result<Html<String>, StatusCode> {
-    if let Some(username) = cookies.get("username") {
-        let git_branch = format!("user/{}", username.value());
-        trace!(
-            "Fetching from origin: {:?}",
-            Command::new("git")
-                .current_dir(&state.wiki_dir)
-                .args(["fetch", "origin"])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "Checking out {git_branch}: {:?}",
-            Command::new("git")
-                .current_dir(&state.wiki_dir)
-                .args(["checkout", "-B", &git_branch])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "Resetting {git_branch} to origin: {:?}",
-            Command::new("git")
-                .current_dir(&state.wiki_dir)
-                .args(["reset", "--hard", &format!("origin/{git_branch}")])
-                .output()
-                .expect("error running git command")
-        );
-
-        let path = PathBuf::from(state.wiki_dir)
-            .join(&article_path)
-            .with_extension("md");
-        if !path_editable(&path) {
-            debug!("{} not editable.", path.display());
-            return Err(StatusCode::NOT_FOUND);
-        }
-        trace!("Rendering template for /edit/{}.", path.display());
-        fs::read_to_string(&path).map_or_else(
-            |_| {
-                trace!("file not found at {}: creating new file", path.display());
-                EditorTemplate {
-                    file_content: String::new(),
-                }
-                .render()
-                .map_or_else(
-                    |e| {
-                        error!("Error rendering template for {}: {}", path.display(), e);
-                        Err(StatusCode::INTERNAL_SERVER_ERROR)
-                    },
-                    |rendered| {
-                        trace!("rendered html for /edit/wiki/{article_path}: {rendered}");
-                        Ok(Html(rendered))
-                    },
-                )
-            },
-            |file_content| {
-                trace!("file_content for {}: {}", path.display(), file_content);
-                EditorTemplate { file_content }.render().map_or_else(
-                    |e| {
-                        error!("Error rendering template for {}: {}", path.display(), e);
-                        Err(StatusCode::INTERNAL_SERVER_ERROR)
-                    },
-                    |rendered| {
-                        trace!("rendered html for /edit/wiki/{article_path}: {rendered}");
-                        Ok(Html(rendered))
-                    },
-                )
-            },
+    let git_branch = if params.edit_mode.unwrap_or(false) {
+        cookies.get("username").map_or_else(
+            || "prime".to_string(),
+            |username| format!("user/{}", username.value()),
         )
     } else {
-        Err(StatusCode::NOT_FOUND)
-    }
-}
-
-/// Checks if a file path is editable by checking if any of the following conditions are true:
-/// 1. The file already exists and is not a directory
-/// 2. The parent directory exists
-fn path_editable<P: AsRef<path::Path>>(path: P) -> bool {
-    let path = path.as_ref();
-    path.is_file() || path.parent().is_some_and(path::Path::is_dir)
+        "prime".to_string()
+    };
+    checkout_remote_branch(&git_branch, &state.wiki_dir);
+    let path = get_file_path(&article_path, &state.wiki_dir);
+    fs::read_to_string(&path).map_or_else(
+        |e| {
+            warn!("Couldn't read {} to string: {}", path.display(), e);
+            Err(StatusCode::NOT_FOUND)
+            //FIXME: if file_path is editable, edit_mode, and logged in, render empty file_content
+        },
+        |file_content| {
+            ArticleTemplate {
+                edit_mode: params.edit_mode.unwrap_or(false),
+                username: cookies.get("username").map(|c| c.value().to_string()),
+                raw_file_content: file_content.clone(),
+                rendered_html: to_html(&file_content),
+            }
+            .render()
+            .map_or_else(
+                |e| {
+                    error!("Error rendering template for {}: {}", path.display(), e);
+                    Err(StatusCode::INTERNAL_SERVER_ERROR)
+                },
+                |rendered| Ok(Html(rendered)),
+            )
+        },
+    )
 }
 
 #[derive(Deserialize)]
@@ -333,11 +241,7 @@ struct EditForm {
     markdown: String,
 }
 
-fn normalise_newlines(input: &str) -> String {
-    input.replace("\r\n", "\n").replace('\r', "\n")
-}
-
-async fn edit_post(
+async fn update_wiki_page(
     Path(article_path): Path<String>,
     State(state): State<AppState>,
     cookies: Cookies,
@@ -345,34 +249,9 @@ async fn edit_post(
 ) -> Result<Redirect, StatusCode> {
     if let Some(username) = cookies.get("username") {
         let git_branch = format!("user/{}", username.value());
-        trace!(
-            "Fetching from origin: {:?}",
-            Command::new("git")
-                .current_dir(&state.wiki_dir)
-                .args(["fetch", "origin"])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "Checking out {git_branch}: {:?}",
-            Command::new("git")
-                .current_dir(&state.wiki_dir)
-                .args(["checkout", "-B", &git_branch])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "Resetting {git_branch} to origin: {:?}",
-            Command::new("git")
-                .current_dir(&state.wiki_dir)
-                .args(["reset", "--hard", &format!("origin/{git_branch}")])
-                .output()
-                .expect("error running git command")
-        );
+        checkout_remote_branch(&git_branch, &state.wiki_dir);
 
-        let path = PathBuf::from(&state.wiki_dir)
-            .join(&article_path)
-            .with_extension("md");
+        let path = get_file_path(&article_path, &state.wiki_dir);
         if !path_editable(&path) {
             debug!("{} not editable.", path.display());
             return Err(StatusCode::NOT_FOUND);
@@ -409,12 +288,10 @@ async fn edit_post(
                         .output()
                         .expect("error running git command")
                 );
-                let wiki_path = "/wiki/".to_owned() + &article_path;
-                Ok(Redirect::to(&wiki_path))
+                Ok(Redirect::to(&("/".to_owned() + &article_path)))
             },
         )
     } else {
-        let wiki_path = "/wiki/".to_owned() + &article_path;
-        Ok(Redirect::to(&wiki_path))
+        Ok(Redirect::to(&("/".to_owned() + &article_path)))
     }
 }
