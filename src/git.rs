@@ -1,6 +1,6 @@
-use log::trace;
+use git2::{Cred, RemoteCallbacks, Repository};
+use std::env;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::sync::Arc;
 use tempfile::{TempDir, tempdir};
 
@@ -30,48 +30,46 @@ impl Clone for GitRemote {
 impl GitRemote {
     pub fn init(remote_url: &str) -> Self {
         let tempdir = tempdir().expect("Error creating tempdir!");
-        let repo_directory = tempdir.path().to_path_buf();
-        trace!(
-            "`git clone {remote_url} {}`: {:?}",
-            repo_directory.display(),
-            std::process::Command::new("git")
-                .args([
-                    "clone",
-                    remote_url,
-                    repo_directory
-                        .to_str()
-                        .expect("Invalid UTF-8 in tempdir path!"),
-                ])
-                .output()
-                .expect("git command failed to start")
-        );
-        trace!(
-            "`git config user.name aenyrathia.wiki`: {:?}",
-            std::process::Command::new("git")
-                .current_dir(&repo_directory)
-                .args(["config", "user.name", "aenyrathia.wiki"])
-                .output()
-                .expect("git command failed to start")
-        );
-        trace!(
-            "`git config user.email git@aenyrathia.wiki`: {:?}",
-            std::process::Command::new("git")
-                .current_dir(&repo_directory)
-                .args(["config", "user.email", "git@aenyrathia.wiki"])
-                .output()
-                .expect("git command failed to start")
-        );
+        // TODO: use git2 to clone `remote_url` into `repo_directory`
+        // and set user.name/user.email on the repo config.
+        let mut callbacks = RemoteCallbacks::new();
+        callbacks.credentials(|_url, username_from_url, _allowed_types| {
+            Cred::ssh_key(
+                username_from_url.unwrap(),
+                None,
+                Path::new(&format!("{}/.ssh/id_ed25519", env::var("HOME").unwrap())),
+                None,
+            )
+        });
+        let mut fo = git2::FetchOptions::new();
+        fo.remote_callbacks(callbacks);
+        let mut builder = git2::build::RepoBuilder::new();
+        builder.fetch_options(fo);
+        let repository = builder
+            .clone(remote_url, tempdir.path())
+            .expect("Error cloning repository!");
+        let mut repository_config = repository
+            .config()
+            .expect("Error getting config for repository!");
+        let _ = repository_config.set_str("user.name", "aenyrathia.wiki");
+        let _ = repository_config.set_str("user.email", "git@aenyrathia.wiki");
+
         Self {
             tempdir: Arc::new(tempdir),
-            repo_directory,
+            repo_directory: repository.path().parent().unwrap().to_path_buf(),
         }
     }
 
     pub fn read_file(&self, relative_path: &str, branch_name: Option<&str>) -> Option<String> {
+        let repo = Repository::open(&self.repo_directory).ok()?;
+        let path = repo.commondir().join(relative_path);
         let branch_name = branch_name.unwrap_or("prime");
-        self.checkout_remote_branch(branch_name);
-        let path = PathBuf::from(&self.repo_directory).join(relative_path);
-        std::fs::read_to_string(&path).ok()
+        // TODO:
+        // - fetch `branch_name` from origin if stale
+        // - read blob for `relative_path` at branch tip (no worktree checkout)
+        // - return contents as String
+        let _ = (branch_name, path);
+        None
     }
 
     pub fn write_file(
@@ -80,91 +78,20 @@ impl GitRemote {
         content: &str,
         branch_name: Option<&str>,
     ) -> Result<(), ()> {
+        let repo = Repository::open(&self.repo_directory).map_err(|_| ())?;
+        let path = repo.commondir().join(relative_path);
         let branch_name = branch_name.unwrap_or("prime");
-        self.checkout_remote_branch(branch_name);
-        let path = PathBuf::from(&self.repo_directory).join(relative_path);
         if path_editable(&path) {
-            std::fs::write(&path, content).map_or_else(
-                |_| Err(()),
-                |()| {
-                    self.update_and_sync(branch_name);
-                    Ok(())
-                },
-            )
+            // TODO:
+            // - fetch `branch_name` from origin if stale
+            // - check out/update worktree for `branch_name` (or apply tree edit in-memory)
+            // - write `content` to `relative_path` (create parents as needed)
+            // - stage and commit with a meaningful message/author
+            // - push `branch_name` to origin
+            let _ = (branch_name, content);
+            Ok(())
         } else {
             Err(())
         }
-    }
-
-    fn update_and_sync(&self, branch_name: &str) {
-        trace!("Rebasing {branch_name} and syncing latest changes to origin.");
-        trace!(
-            "`git fetch origin`: {:?}",
-            Command::new("git")
-                .current_dir(&self.repo_directory)
-                .args(["fetch", "origin"])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "`git add .`: {:?}",
-            Command::new("git")
-                .current_dir(&self.repo_directory)
-                .args(["add", "."])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "`git commit -m \"test\"`: {:?}",
-            Command::new("git")
-                .current_dir(&self.repo_directory)
-                .args(["commit", "-m", "test"])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "`git rebase origin/prime`: {:?}",
-            Command::new("git")
-                .current_dir(&self.repo_directory)
-                .args(["rebase", "origin/prime"])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "`git push origin {branch_name}`: {:?}",
-            Command::new("git")
-                .current_dir(&self.repo_directory)
-                .args(["push", "origin", branch_name])
-                .output()
-                .expect("error running git command")
-        );
-    }
-
-    fn checkout_remote_branch(&self, branch_name: &str) {
-        trace!("Checking out remote branch origin/{branch_name}.");
-        trace!(
-            "`git fetch origin`: {:?}",
-            Command::new("git")
-                .current_dir(&self.repo_directory)
-                .args(["fetch", "origin"])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "`git checkout -B {branch_name}`: {:?}",
-            Command::new("git")
-                .current_dir(&self.repo_directory)
-                .args(["checkout", "-B", branch_name])
-                .output()
-                .expect("error running git command")
-        );
-        trace!(
-            "`git reset --hard origin/{branch_name}`: {:?}",
-            Command::new("git")
-                .current_dir(&self.repo_directory)
-                .args(["reset", "--hard", &format!("origin/{branch_name}")])
-                .output()
-                .expect("error running git command")
-        );
     }
 }
