@@ -1,12 +1,18 @@
-use axum::ServiceExt;
+use app::{settings, state};
+use axum::http::StatusCode;
+use axum::{Router, ServiceExt};
 use log::info;
+use routes::auth::AuthRouter;
+use routes::wiki::WikiRouter;
+use std::time::Duration;
+use tower_cookies::CookieManagerLayer;
 use tower_http::normalize_path::NormalizePath;
+use tower_http::timeout::TimeoutLayer;
 
+mod app;
 mod formatting;
-mod handlers;
-mod router;
-mod settings;
-mod wiki;
+mod git;
+mod routes;
 
 #[tokio::main]
 async fn main() {
@@ -15,22 +21,18 @@ async fn main() {
     builder.init();
 
     let settings = settings::AppSettings::from_env();
-    let tempdir = tempfile::tempdir().expect("Error creating temporary directory;");
-    let wiki = wiki::Wiki::from_remote(&settings.git_remote, &tempdir);
+    let state = state::AppState::init(&settings);
+    let router = Router::new()
+        .merge(AuthRouter::build())
+        .merge(WikiRouter::build(state))
+        .layer((
+            CookieManagerLayer::new(),
+            TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, Duration::from_secs(10)),
+        ));
 
     info!("Starting app and listening on {}", &settings.addr);
     let listener = tokio::net::TcpListener::bind(&settings.addr).await.unwrap();
-    let app = NormalizePath::trim_trailing_slash(router::build(wiki));
+    let app = NormalizePath::trim_trailing_slash(router);
     let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
-    axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal(tempdir))
-        .await
-        .unwrap();
-}
-
-async fn shutdown_signal(tempdir: tempfile::TempDir) {
-    tokio::signal::ctrl_c()
-        .await
-        .expect("Failed to initalise Ctrl C signal handler.");
-    tempdir.close().expect("");
+    axum::serve(listener, app).await.unwrap();
 }
