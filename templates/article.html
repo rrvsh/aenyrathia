@@ -2,15 +2,72 @@
 <html>
   <body>
     <header>
-      {% match username %}
-        {% when Some with (val) %}
-        signed in as: <a href="/logout">{{ val }}</a>
-        {% when None %}
-        <form method="post" action="/login">
-          <input name="username">
-          <button>Login</button>
-        </form>
-      {% endmatch %}
+      {% block login %}
+        {% match login_state %}
+          {% when LoggedOut %}
+          <form method="post" action="/ui-state">
+            <input type="hidden" name="to_state" value="login_form">
+            <input type="hidden" name="return_to" value="{{ redirect_path }}">
+            <button type="submit">Login</button>
+          </form>
+          <form method="post" action="/ui-state">
+            <input type="hidden" name="to_state" value="register_form">
+            <input type="hidden" name="return_to" value="{{ redirect_path }}">
+            <button type="submit">Register</button>
+          </form>
+          {% when LoggedIn with (val) %}
+          <p>signed in as: {{ val }}</p>
+          <form method="post" action="/logout">
+            <button type="submit">Logout</button>
+          </form>
+          {% when LoginForm %}
+          {% if error_message.len() > 0 %}
+            <p role="alert">Please enter a username and password.</p>
+          {% endif %}
+          <form method="post" action="/login">
+            <label for="login-username">Username</label>
+            <input id="login-username" name="username" autocomplete="username" required>
+            <label for="login-password">Password</label>
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              minlength="8"
+              required
+            >
+            <button type="submit">Submit</button>
+          </form>
+          {% when RegisterForm %}
+          {% if error_message.len() > 0 %}
+            <p role="alert">Please complete all fields with a valid email.</p>
+          {% endif %}
+          <form method="post" action="/register">
+            <label for="register-fullname">Full name</label>
+            <input id="register-fullname" name="fullname" autocomplete="name" required>
+            <label for="register-email">Email</label>
+            <input
+              id="register-email"
+              name="email"
+              type="email"
+              autocomplete="email"
+              required
+            >
+            <label for="register-username">Username</label>
+            <input id="register-username" name="username" autocomplete="username" required>
+            <label for="register-password">Password</label>
+            <input
+              id="register-password"
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              minlength="8"
+              required
+            >
+            <button type="submit">Submit</button>
+          </form>
+        {% endmatch %}
+      {% endblock %}
     </header>
     <div>
       {% if edit_mode %}

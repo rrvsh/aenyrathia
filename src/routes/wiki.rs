@@ -1,5 +1,6 @@
 use crate::app::state::AppState;
 use crate::formatting::{normalise_newlines, resolve_article_path, resolve_branch_name};
+use crate::routes::wiki::LoginState::{LoggedIn, LoggedOut, LoginForm, RegisterForm};
 use askama::Template;
 use axum::Router;
 use axum::extract::Form;
@@ -25,24 +26,35 @@ impl WikiRouter {
     }
 }
 
+enum LoginState {
+    LoggedOut,
+    LoggedIn(String),
+    LoginForm,
+    RegisterForm,
+}
+
 #[derive(Template)]
 #[template(path = "article.html")]
 struct ArticleTemplate {
-    username: Option<String>,
+    login_state: LoginState,
     edit_mode: bool,
     raw_file_content: String,
     rendered_html: String,
+    error_message: String,
+    redirect_path: String,
 }
 
 #[derive(Deserialize)]
-pub struct EditModeQuery {
+pub struct ArticlePageParams {
     edit_mode: Option<bool>,
+    to_state: Option<String>,
+    error: Option<String>,
 }
 
 pub async fn article_get(
     cookies: Cookies,
     article_path: Option<Path<String>>,
-    Query(params): Query<EditModeQuery>,
+    Query(params): Query<ArticlePageParams>,
     State(state): State<AppState>,
 ) -> Result<Html<String>, StatusCode> {
     let article_path = article_path.map(|Path(article_path)| article_path);
@@ -58,6 +70,21 @@ pub async fn article_get(
         params.edit_mode.unwrap_or(false)
     };
 
+    let ui_state = cookies
+        .get("ui_state")
+        .map(|cookie| cookie.value().to_string())
+        .or_else(|| params.to_state.clone());
+    let mut login_state = LoginState::LoggedOut;
+    if let Some(username) = cookies.get("username") {
+        login_state = LoginState::LoggedIn(username.value().to_string());
+    } else if let Some(state) = ui_state {
+        login_state = match state.as_str() {
+            "login_form" => LoginForm,
+            "register_form" => RegisterForm,
+            _ => LoggedOut,
+        };
+    }
+
     let file_content = state.remote.read_file(&relative_path, Some(&branch_name));
     let mut raw_file_content = String::new();
     let mut rendered_html = String::new();
@@ -67,16 +94,20 @@ pub async fn article_get(
     } else if !edit_mode {
         return Err(StatusCode::NOT_FOUND);
     }
+    let error_message = params.error.unwrap_or_default();
+    let redirect_path_for_log = redirect_path.clone();
     ArticleTemplate {
-        username,
+        login_state,
         edit_mode,
         raw_file_content,
         rendered_html,
+        error_message,
+        redirect_path,
     }
     .render()
     .map_or_else(
         |e| {
-            error!("Error rendering template for {redirect_path}: {e}");
+            error!("Error rendering template for {redirect_path_for_log}: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         },
         |rendered| Ok(Html(rendered)),

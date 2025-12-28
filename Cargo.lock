@@ -15,6 +15,7 @@ dependencies = [
  "serde",
  "tempfile",
  "tokio",
+ "tower",
  "tower-cookies",
  "tower-http",
 ]
