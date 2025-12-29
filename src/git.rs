@@ -294,7 +294,7 @@ mod tests {
         std::str::from_utf8(blob.content()).ok().map(str::to_string)
     }
 
-    /// path_editable allows existing files and paths with existing parents.
+    /// `path_editable` allows existing files and paths with existing parents.
     #[test]
     fn path_editable_accepts_existing_paths() {
         let tmp = tempdir().unwrap();
@@ -306,7 +306,7 @@ mod tests {
         assert!(path_editable(&nested));
     }
 
-    /// read_file fetches and returns blob content from the specified branch.
+    /// `read_file` fetches and returns blob content from the specified branch.
     #[test]
     fn read_file_returns_content() {
         let remote_dir = seed_remote();
@@ -317,7 +317,7 @@ mod tests {
         assert_eq!(content, "hello world");
     }
 
-    /// write_file writes content, commits, and pushes to a new user branch.
+    /// `write_file` writes content, commits, and pushes to a new user branch.
     #[test]
     fn write_file_writes_to_new_branch() {
         let remote_dir = seed_remote();
