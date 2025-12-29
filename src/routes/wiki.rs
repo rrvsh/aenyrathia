@@ -17,7 +17,7 @@ pub struct WikiRouter {}
 
 impl WikiRouter {
     pub fn build(state: AppState) -> Router {
-        let handlers = get(article_get).put(article_put);
+        let handlers = get(article_get).post(article_post);
         Router::new()
             .route("/", handlers.clone())
             .route("/{*article_path}", handlers)
@@ -51,18 +51,27 @@ pub async fn article_get(
         .map(|cookie| cookie.value().to_string());
     let redirect_path = String::from("/") + &article_path.clone().unwrap_or_default();
     let relative_path = resolve_article_path(article_path);
-    let branch_name = resolve_branch_name(params.edit_mode, username);
+    let branch_name = resolve_branch_name(params.edit_mode, username.as_ref());
+    let edit_mode = if username.is_none() {
+        false
+    } else {
+        params.edit_mode.unwrap_or(false)
+    };
 
-    let file_content = state
-        .remote
-        .read_file(&relative_path, Some(&branch_name))
-        .map_or_else(String::new, |file_content| file_content);
-
+    let file_content = state.remote.read_file(&relative_path, Some(&branch_name));
+    let mut raw_file_content = String::new();
+    let mut rendered_html = String::new();
+    if let Some(file_content) = file_content {
+        rendered_html = to_html(&file_content);
+        raw_file_content = file_content;
+    } else if !edit_mode {
+        return Err(StatusCode::NOT_FOUND);
+    }
     ArticleTemplate {
-        edit_mode: params.edit_mode.unwrap_or(false),
-        username: cookies.get("username").map(|c| c.value().to_string()),
-        raw_file_content: file_content.clone(),
-        rendered_html: to_html(&file_content),
+        username,
+        edit_mode,
+        raw_file_content,
+        rendered_html,
     }
     .render()
     .map_or_else(
@@ -79,7 +88,7 @@ pub struct EditForm {
     markdown: String,
 }
 
-pub async fn article_put(
+pub async fn article_post(
     article_path: Option<Path<String>>,
     State(state): State<AppState>,
     cookies: Cookies,
