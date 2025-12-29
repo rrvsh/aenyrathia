@@ -1,7 +1,7 @@
 use git2::{
-    build::CheckoutBuilder, Cred, FetchOptions, PushOptions, RemoteCallbacks, Repository,
-    Signature,
+    Cred, FetchOptions, PushOptions, RemoteCallbacks, Repository, Signature, build::CheckoutBuilder,
 };
+use log::trace;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -65,12 +65,31 @@ impl GitRemote {
             .or_else(|_| repo.find_reference("refs/remotes/origin/prime"))
             .ok()?;
         let commit = reference.peel_to_commit().ok()?;
+        trace!(
+            "latest commit summary on ref {:?}: {:?}",
+            reference.name(),
+            commit.summary()
+        );
         let tree = commit.tree().ok()?;
+        trace!(
+            "latest tree id on ref {:?}: {:?}",
+            reference.name(),
+            tree.id()
+        );
         let entry = tree.get_path(Path::new(relative_path)).ok()?;
+        trace!(
+            "tree entry name {:?} for path {relative_path} on ref {:?}",
+            entry.name(),
+            reference.name()
+        );
+
         let blob = repo.find_blob(entry.id()).ok()?;
-        std::str::from_utf8(blob.content())
-            .ok()
-            .map(std::string::ToString::to_string)
+        let blob_content = std::str::from_utf8(blob.content()).ok()?;
+        trace!(
+            "blob content {blob_content} for path {relative_path} on ref {:?}",
+            reference.name()
+        );
+        Some(blob_content.to_string())
     }
 
     /// Ensure remote is current, check out target branch, write, commit, and push content.
@@ -82,8 +101,6 @@ impl GitRemote {
     ) -> Result<(), ()> {
         let repo = Repository::open(&self.repo_directory).map_err(|_| ())?;
         let branch_name = branch_name.unwrap_or("prime");
-        let workdir = repo.workdir().ok_or(())?;
-
         let _ = fetch_branch(&repo, branch_name);
         let _ = fetch_branch(&repo, "prime");
 
@@ -100,7 +117,6 @@ impl GitRemote {
             repo.branch(branch_name, &base_commit, true)
                 .map_err(|_| ())?;
         }
-
         repo.set_head(&format!("refs/heads/{branch_name}"))
             .map_err(|_| ())?;
         repo.checkout_head(Some(
@@ -111,6 +127,7 @@ impl GitRemote {
         ))
         .map_err(|_| ())?;
 
+        let workdir = repo.workdir().ok_or(())?;
         let target_path = workdir.join(relative_path);
         if !path_editable(&target_path) {
             return Err(());
@@ -157,11 +174,10 @@ impl GitRemote {
     }
 }
 
-/// Build SSH callbacks that always use the app key at $HOME/.ssh/id_ed25519.
+/// Build SSH callbacks that always use the app key at `$HOME/.ssh/id_ed25519`.
 fn ssh_callbacks<'cb>() -> RemoteCallbacks<'cb> {
     let mut callbacks = RemoteCallbacks::new();
-    let home = env::var("HOME")
-        .expect("HOME not set; required to locate SSH key");
+    let home = env::var("HOME").expect("HOME not set; required to locate SSH key");
     callbacks.credentials(move |_url, username_from_url, _allowed_types| {
         let username = username_from_url.expect("username missing for SSH auth");
         let key_path = Path::new(&home).join(".ssh/id_ed25519");
