@@ -17,7 +17,7 @@ pub struct WikiRouter {}
 
 impl WikiRouter {
     pub fn build(state: AppState) -> Router {
-        let handlers = get(article_get).put(article_put);
+        let handlers = get(article_get).post(article_post);
         Router::new()
             .route("/", handlers.clone())
             .route("/{*article_path}", handlers)
@@ -88,7 +88,7 @@ pub struct EditForm {
     markdown: String,
 }
 
-pub async fn article_put(
+pub async fn article_post(
     article_path: Option<Path<String>>,
     State(state): State<AppState>,
     cookies: Cookies,

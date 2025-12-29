@@ -131,6 +131,10 @@ impl GitRemote {
                 .allow_conflicts(false),
         ))
         .map_err(|_| ())?;
+        trace!(
+            "Checked out base commit {:?} for branch refs/heads/{branch_name}.",
+            base_commit.summary()
+        );
 
         let workdir = repo.workdir().ok_or(())?;
         let target_path = workdir.join(relative_path);
@@ -138,13 +142,16 @@ impl GitRemote {
             return Err(());
         }
         std::fs::write(&target_path, content).map_err(|_| ())?;
+        trace!(
+            "Wrote {content} to file at path {} for branch refs/heads/{branch_name}.",
+            target_path.display()
+        );
 
         let mut index = repo.index().map_err(|_| ())?;
         index.add_path(Path::new(relative_path)).map_err(|_| ())?;
         index.write().map_err(|_| ())?;
         let tree_id = index.write_tree().map_err(|_| ())?;
         let tree = repo.find_tree(tree_id).map_err(|_| ())?;
-
         let parent_reference = repo
             .find_reference(&format!("refs/heads/{branch_name}"))
             .map_err(|_| ())?;
@@ -162,6 +169,7 @@ impl GitRemote {
             &[&parent_commit],
         )
         .map_err(|_| ())?;
+        trace!("Committed to branch refs/heads/{branch_name}.");
 
         let mut remote = repo.find_remote("origin").map_err(|_| ())?;
         let mut push_options = PushOptions::new();
@@ -174,6 +182,7 @@ impl GitRemote {
                 Some(&mut push_options),
             )
             .map_err(|_| ())?;
+        trace!("Pushed to remote refs/heads/{branch_name}.");
 
         Ok(())
     }
