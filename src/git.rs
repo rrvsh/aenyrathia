@@ -109,13 +109,18 @@ impl GitRemote {
             .or_else(|_| repo.find_reference("refs/remotes/origin/prime"))
             .map_err(|_| ())?;
         let base_commit = base_reference.peel_to_commit().map_err(|_| ())?;
-
-        if repo
-            .find_branch(branch_name, git2::BranchType::Local)
-            .is_err()
-        {
-            repo.branch(branch_name, &base_commit, true)
-                .map_err(|_| ())?;
+        let target_oid = base_commit.id();
+        match repo.find_branch(branch_name, git2::BranchType::Local) {
+            Ok(local_branch) => {
+                local_branch
+                    .into_reference()
+                    .set_target(target_oid, "force update from remote")
+                    .map_err(|_| ())?;
+            }
+            Err(_) => {
+                repo.branch(branch_name, &base_commit, true)
+                    .map_err(|_| ())?;
+            }
         }
         repo.set_head(&format!("refs/heads/{branch_name}"))
             .map_err(|_| ())?;
