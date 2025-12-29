@@ -16,9 +16,11 @@
               bacon
               cargo
               clippy
-              rustfmt
               just
+              openssl
+              pkg-config
               rustc
+              rustfmt
             ];
           };
         };
