@@ -11,6 +11,7 @@ use tower_http::normalize_path::NormalizePath;
 use tower_http::timeout::TimeoutLayer;
 
 mod app;
+mod filters;
 mod formatting;
 mod git;
 mod routes;
