@@ -30,7 +30,7 @@ async fn main() {
         .max_connections(20)
         .connect_with(settings.db_options.clone())
         .await
-        .expect("");
+        .expect("Connnecting to database failed!");
     sqlx::migrate!().run(&db).await.expect("Migration failed!");
 
     let router = Router::new()
