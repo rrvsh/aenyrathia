@@ -1,6 +1,6 @@
 use argon2::{
     Argon2,
-    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use askama::Template;
 use axum::{
@@ -13,12 +13,15 @@ use axum::{
 use log::error;
 use serde::Deserialize;
 use sqlx::PgPool;
+use tower_cookies::{Cookie, Cookies};
 
 pub struct AuthRouter {}
 
 impl AuthRouter {
     pub fn build() -> Router {
-        Router::new().route("/register", get(register_get).post(register_post))
+        Router::new()
+            .route("/register", get(register_get).post(register_post))
+            .route("/login", get(login_get).post(login_post))
     }
 }
 
@@ -69,4 +72,50 @@ pub async fn register_post(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Redirect::to("/"))
+}
+
+#[derive(Template)]
+#[template(path = "login.html")]
+struct LoginTemplate {}
+
+pub async fn login_get() -> Result<Html<String>, StatusCode> {
+    LoginTemplate {}.render().map_or_else(
+        |e| {
+            error!("Error rendering register template: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        },
+        |rendered| Ok(Html(rendered)),
+    )
+}
+
+#[derive(Deserialize)]
+pub struct LoginForm {
+    email: String,
+    password: String,
+}
+
+pub async fn login_post(
+    db: Extension<PgPool>,
+    cookies: Cookies,
+    Form(form): Form<LoginForm>,
+) -> Result<Redirect, StatusCode> {
+    let LoginForm { email, password } = form;
+
+    let password_hash = sqlx::query!("select password_hash from user_data where email=$1", email)
+        .fetch_one(&*db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .password_hash;
+    let parsed_hash =
+        PasswordHash::new(&password_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if Argon2::default()
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok()
+    {
+        cookies.add(Cookie::new("username", email));
+        Ok(Redirect::to("/"))
+    } else {
+        Err(StatusCode::UNAUTHORIZED)
+    }
 }
