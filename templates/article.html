@@ -9,8 +9,8 @@
         <button type="submit">Logout</button>
       </form>
       {% when None %}
-      <a href="/login">Login</a>
-      <a href="/register">Register</a>
+      <a href="/login?redirect_to={{ current_path }}">Login</a>
+      <a href="/register?redirect_to={{ current_path }}">Register</a>
     {% endmatch %}
   </header>
   <div>
