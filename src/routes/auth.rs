@@ -37,9 +37,7 @@ pub struct RedirectQuery {
     redirect_to: Option<String>,
 }
 
-pub async fn register_get(
-    Query(params): Query<RedirectQuery>,
-) -> Result<Html<String>, StatusCode> {
+pub async fn register_get(Query(params): Query<RedirectQuery>) -> Result<Html<String>, StatusCode> {
     let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
 
     RegisterTemplate { redirect_path }.render().map_or_else(
@@ -60,6 +58,7 @@ pub struct RegisterForm {
 
 pub async fn register_post(
     db: Extension<PgPool>,
+    Query(params): Query<RedirectQuery>,
     Form(form): Form<RegisterForm>,
 ) -> Result<Redirect, StatusCode> {
     let RegisterForm {
@@ -83,7 +82,9 @@ pub async fn register_post(
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Redirect::to("/"))
+    let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
+
+    Ok(Redirect::to(&redirect_path))
 }
 
 #[derive(Template)]
@@ -92,9 +93,7 @@ struct LoginTemplate {
     redirect_path: String,
 }
 
-pub async fn login_get(
-    Query(params): Query<RedirectQuery>,
-) -> Result<Html<String>, StatusCode> {
+pub async fn login_get(Query(params): Query<RedirectQuery>) -> Result<Html<String>, StatusCode> {
     let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
 
     LoginTemplate { redirect_path }.render().map_or_else(
@@ -115,6 +114,7 @@ pub struct LoginForm {
 pub async fn login_post(
     db: Extension<PgPool>,
     cookies: Cookies,
+    Query(params): Query<RedirectQuery>,
     Form(form): Form<LoginForm>,
 ) -> Result<Redirect, StatusCode> {
     let LoginForm { email, password } = form;
@@ -135,15 +135,19 @@ pub async fn login_post(
     {
         cookies.add(Cookie::new("full_name", result.full_name));
         cookies.add(Cookie::new("email", email));
-        Ok(Redirect::to("/"))
+        let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
+
+        Ok(Redirect::to(&redirect_path))
     } else {
         Err(StatusCode::UNAUTHORIZED)
     }
 }
 
-pub async fn logout_post(cookies: Cookies) -> Redirect {
+pub async fn logout_post(cookies: Cookies, Query(params): Query<RedirectQuery>) -> Redirect {
     cookies.remove(Cookie::new("full_name", ""));
     cookies.remove(Cookie::new("email", ""));
 
-    Redirect::to("/")
+    let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
+
+    Redirect::to(&redirect_path)
 }
