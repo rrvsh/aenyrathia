@@ -4,7 +4,7 @@ use argon2::{
 };
 use askama::Template;
 use axum::{
-    Router,
+    Extension, Router,
     extract::Form,
     http::StatusCode,
     response::{Html, Redirect},
@@ -12,6 +12,7 @@ use axum::{
 };
 use log::error;
 use serde::Deserialize;
+use sqlx::PgPool;
 use tower_cookies::{Cookie, Cookies};
 
 pub struct AuthRouter {}
@@ -61,7 +62,10 @@ pub struct RegisterForm {
     password: String,
 }
 
-pub async fn register_post(Form(form): Form<RegisterForm>) -> Result<Redirect, StatusCode> {
+pub async fn register_post(
+    db: Extension<PgPool>,
+    Form(form): Form<RegisterForm>,
+) -> Result<Redirect, StatusCode> {
     let RegisterForm {
         fullname,
         email,
@@ -69,10 +73,19 @@ pub async fn register_post(Form(form): Form<RegisterForm>) -> Result<Redirect, S
     } = form;
 
     let salt = SaltString::generate(&mut OsRng);
-    Argon2::default()
+    let password_hash = Argon2::default()
         .hash_password(password.as_bytes(), &salt)
-        .map_or(Err(StatusCode::INTERNAL_SERVER_ERROR), |password_hash| {
-            log::info!("Full Name: {fullname}, Email: {email}, Password Hash: {password_hash}");
-            Ok(Redirect::to("/"))
-        })
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    sqlx::query!(
+        "insert into user_data (full_name, email, password_hash) values ($1, $2, $3)",
+        fullname,
+        email,
+        password_hash.to_string(),
+    )
+    .execute(&*db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Redirect::to("/"))
 }
