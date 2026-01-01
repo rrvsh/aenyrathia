@@ -10,6 +10,7 @@ keywords = ["web"]
 categories = ["wiki-site"]
 
 [dependencies]
+argon2 = "0.5.3"
 askama = "0.14.0"
 axum = "0.8.7"
 env_logger = "0.11.8"
