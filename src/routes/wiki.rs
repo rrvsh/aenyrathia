@@ -1,5 +1,6 @@
 use crate::app::state::AppState;
 use crate::formatting::{normalise_newlines, resolve_article_path, resolve_branch_name};
+use crate::git::Author;
 use askama::Template;
 use axum::Router;
 use axum::extract::Form;
@@ -100,10 +101,16 @@ pub async fn article_post(
         let relative_path = resolve_article_path(article_path);
         let branch_name = resolve_branch_name(Some(true), Some(&full_name.value().to_string()));
         let content = normalise_newlines(&form.markdown);
-        match state
-            .remote
-            .write_file(&relative_path, &content, Some(&branch_name))
-        {
+        let author = cookies.get("email").map(|email| Author {
+            name: full_name.value().to_string(),
+            email: email.value().to_string(),
+        });
+        match state.remote.write_file(
+            &relative_path,
+            &content,
+            Some(&branch_name),
+            author.as_ref(),
+        ) {
             Ok(()) => Ok(Redirect::to(&redirect_path)),
             Err(()) => Err(StatusCode::INTERNAL_SERVER_ERROR),
         }
