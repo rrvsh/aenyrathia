@@ -30,3 +30,9 @@ run-docker:
     -v ./secrets/deploy_aenyrathia:/root/.ssh/id_ed25519:ro \
     -v ./secrets/known_hosts:/root/.ssh/known_hosts:ro \
     aenyrathia:latest
+
+setup:
+  docker-compose up -d
+
+reset:
+  docker-compose down -v
