@@ -13,6 +13,8 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: rrvsh/aenyrathia
+  AR_HOST: asia-southeast1-docker.pkg.dev
+  AR_REPO: aenyrathia/aenyrathia/app
 
 jobs:
   build-and-push:
@@ -22,6 +24,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: aenyrathia
+          workload_identity_provider: projects/620732881410/locations/global/workloadIdentityPools/github/providers/github
+          service_account: github-actions-ci@aenyrathia.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: aenyrathia
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.AR_HOST }} --quiet
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -43,12 +60,15 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:prime
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.AR_HOST }}/${{ env.AR_REPO }}:prime
+            ${{ env.AR_HOST }}/${{ env.AR_REPO }}:latest
+            ${{ env.AR_HOST }}/${{ env.AR_REPO }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Export image reference
         id: image-ref
-        run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+        run: echo "image=${{ env.AR_HOST }}/${{ env.AR_REPO }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
   deploy:
     runs-on: ubuntu-latest
