@@ -28,7 +28,7 @@ async fn main() {
 
     let db = PgPoolOptions::new()
         .max_connections(20)
-        .connect(&settings.db_url)
+        .connect_with(settings.db_options.clone())
         .await
         .expect("");
     sqlx::migrate!().run(&db).await.expect("Migration failed!");
