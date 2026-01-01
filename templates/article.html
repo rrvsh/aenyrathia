@@ -2,14 +2,11 @@
 <html>
   <body>
     <header>
-      {% match username %}
+      {% match full_name %}
         {% when Some with (val) %}
-        signed in as: <a href="/logout">{{ val }}</a>
+        signed in as: {{ val }}
         {% when None %}
-        <form method="post" action="/login">
-          <input name="username">
-          <button>Login</button>
-        </form>
+        <a href="/login">Login</a>
       {% endmatch %}
     </header>
     <div>

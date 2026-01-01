@@ -1,6 +1,6 @@
 use argon2::{
     Argon2,
-    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use askama::Template;
 use axum::{
@@ -8,7 +8,7 @@ use axum::{
     extract::Form,
     http::StatusCode,
     response::{Html, Redirect},
-    routing::{get, post},
+    routing::get,
 };
 use log::error;
 use serde::Deserialize;
@@ -20,25 +20,9 @@ pub struct AuthRouter {}
 impl AuthRouter {
     pub fn build() -> Router {
         Router::new()
-            .route("/login", post(login))
-            .route("/logout", post(logout))
             .route("/register", get(register_get).post(register_post))
+            .route("/login", get(login_get).post(login_post))
     }
-}
-
-#[derive(Deserialize)]
-pub struct LoginRequest {
-    username: String,
-}
-
-pub async fn login(cookies: Cookies, Form(form): Form<LoginRequest>) -> Redirect {
-    cookies.add(Cookie::new("username", form.username));
-    Redirect::to("/")
-}
-
-pub async fn logout(cookies: Cookies) -> Redirect {
-    cookies.remove(Cookie::new("username", ""));
-    Redirect::to("/")
 }
 
 #[derive(Template)]
@@ -88,4 +72,52 @@ pub async fn register_post(
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Redirect::to("/"))
+}
+
+#[derive(Template)]
+#[template(path = "login.html")]
+struct LoginTemplate {}
+
+pub async fn login_get() -> Result<Html<String>, StatusCode> {
+    LoginTemplate {}.render().map_or_else(
+        |e| {
+            error!("Error rendering register template: {e}");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        },
+        |rendered| Ok(Html(rendered)),
+    )
+}
+
+#[derive(Deserialize)]
+pub struct LoginForm {
+    email: String,
+    password: String,
+}
+
+pub async fn login_post(
+    db: Extension<PgPool>,
+    cookies: Cookies,
+    Form(form): Form<LoginForm>,
+) -> Result<Redirect, StatusCode> {
+    let LoginForm { email, password } = form;
+
+    let result = sqlx::query!(
+        "select full_name, password_hash from user_data where email=$1",
+        email
+    )
+    .fetch_one(&*db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let parsed_hash =
+        PasswordHash::new(&result.password_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if Argon2::default()
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_ok()
+    {
+        cookies.add(Cookie::new("full_name", result.full_name));
+        Ok(Redirect::to("/"))
+    } else {
+        Err(StatusCode::UNAUTHORIZED)
+    }
 }
