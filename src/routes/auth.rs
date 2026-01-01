@@ -8,37 +8,18 @@ use axum::{
     extract::Form,
     http::StatusCode,
     response::{Html, Redirect},
-    routing::{get, post},
+    routing::get,
 };
 use log::error;
 use serde::Deserialize;
 use sqlx::PgPool;
-use tower_cookies::{Cookie, Cookies};
 
 pub struct AuthRouter {}
 
 impl AuthRouter {
     pub fn build() -> Router {
-        Router::new()
-            .route("/login", post(login))
-            .route("/logout", post(logout))
-            .route("/register", get(register_get).post(register_post))
+        Router::new().route("/register", get(register_get).post(register_post))
     }
-}
-
-#[derive(Deserialize)]
-pub struct LoginRequest {
-    username: String,
-}
-
-pub async fn login(cookies: Cookies, Form(form): Form<LoginRequest>) -> Redirect {
-    cookies.add(Cookie::new("username", form.username));
-    Redirect::to("/")
-}
-
-pub async fn logout(cookies: Cookies) -> Redirect {
-    cookies.remove(Cookie::new("username", ""));
-    Redirect::to("/")
 }
 
 #[derive(Template)]
