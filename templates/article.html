@@ -1,30 +1,29 @@
-<!DOCTYPE html>
-<html>
-  <body>
-    <header>
-      {% match full_name %}
-        {% when Some with (val) %}
-        signed in as: {{ val }}
-        {% when None %}
-        <a href="/login">Login</a>
-      {% endmatch %}
-    </header>
+{% extends "base.html" %}
+
+{% block content %}
+  <header>
+    {% match full_name %}
+      {% when Some with (val) %}
+      signed in as: {{ val }}
+      {% when None %}
+      <a href="/login">Login</a>
+    {% endmatch %}
+  </header>
+  <div>
     <div>
-      <div>
-      {% if edit_mode %}
-        <form method="post">
-          <textarea name="markdown" rows="12" cols="80">{{ raw_file_content }}</textarea>
-          <button>Send</button>
-        </form>
-      {% else %}
-        {{ raw_file_content | html | safe }}
-      {% endif %}
-      </div>
-      <div>
-      {% if edit_mode %}
-        {{ raw_file_content | html | safe }}
-      {% endif %}
-      </div>
+    {% if edit_mode %}
+      <form method="post">
+        <textarea name="markdown" rows="12" cols="80">{{ raw_file_content }}</textarea>
+        <button>Send</button>
+      </form>
+    {% else %}
+      {{ raw_file_content | html | safe }}
+    {% endif %}
     </div>
-  </body>
-</html>
+    <div>
+    {% if edit_mode %}
+      {{ raw_file_content | html | safe }}
+    {% endif %}
+    </div>
+  </div>
+{% endblock %}

@@ -1,7 +1,7 @@
 use crate::app::state::AppState;
+use crate::filters;
 use crate::formatting::{normalise_newlines, resolve_article_path, resolve_branch_name};
 use crate::git::Author;
-use crate::filters;
 use askama::Template;
 use axum::Router;
 use axum::extract::Form;
