@@ -243,11 +243,8 @@ fn fetch_all(repo: &Repository) -> Result<(), git2::Error> {
     let mut remote = repo.find_remote("origin")?;
     let mut options = FetchOptions::new();
     options.remote_callbacks(ssh_callbacks());
-    trace!("Background fetch: starting");
     let refspecs: &[&str] = &["refs/heads/*:refs/remotes/origin/*"];
-    let result = remote.fetch(refspecs, Some(&mut options), None);
-    trace!("Background fetch: done");
-    result
+    remote.fetch(refspecs, Some(&mut options), None)
 }
 
 fn push_all_branches(repo: &Repository) -> Result<(), git2::Error> {
