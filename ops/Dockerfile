@@ -18,8 +18,5 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/aenyrathia .
 COPY --from=builder /app/static ./static
-ENV PORT=3000
-ENV HOST=0.0.0.0
-ENV PB_LOG=TRACE
 EXPOSE 3000
 ENTRYPOINT ["./aenyrathia"]
