@@ -1,10 +1,7 @@
-Hello! This is the repository for my project, Aenyrathia (working name TBD).
-Feel free to have a poke around!
+# aenyrathia
 
-This will serve as the monorepo for a DnD setting, the DM notes, random musings,
-a webpage to display all the above, and the various tools needed to manage all
-of this.
+## Development
 
-## Video Devlog (of sorts)
-- [Part 1 - Initial Setup and Markdown Formatter]
-https://www.youtube.com/watch?v=QiIuEvvvfps
+Lint and format with `just nice`
+Set up the local postgres development server with `just setup`.
+If you need to clear all data from the local machine, run `just reset`.
