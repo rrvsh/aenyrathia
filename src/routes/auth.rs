@@ -116,6 +116,7 @@ pub async fn login_post(
         .is_ok()
     {
         cookies.add(Cookie::new("full_name", result.full_name));
+        cookies.add(Cookie::new("email", email));
         Ok(Redirect::to("/"))
     } else {
         Err(StatusCode::UNAUTHORIZED)
