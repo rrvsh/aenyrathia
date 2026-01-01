@@ -5,6 +5,9 @@
     {% match full_name %}
       {% when Some with (val) %}
       signed in as: {{ val }}
+      <form method="post" action="/logout?redirect_to={{ current_path }}">
+        <button type="submit">Logout</button>
+      </form>
       {% when None %}
       <a href="/login">Login</a>
     {% endmatch %}

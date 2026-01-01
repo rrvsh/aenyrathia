@@ -8,7 +8,7 @@ use axum::{
     extract::Form,
     http::StatusCode,
     response::{Html, Redirect},
-    routing::get,
+    routing::{get, post},
 };
 use log::error;
 use serde::Deserialize;
@@ -22,6 +22,7 @@ impl AuthRouter {
         Router::new()
             .route("/register", get(register_get).post(register_post))
             .route("/login", get(login_get).post(login_post))
+            .route("/logout", post(logout_post))
     }
 }
 
@@ -121,4 +122,11 @@ pub async fn login_post(
     } else {
         Err(StatusCode::UNAUTHORIZED)
     }
+}
+
+pub async fn logout_post(cookies: Cookies) -> Redirect {
+    cookies.remove(Cookie::new("full_name", ""));
+    cookies.remove(Cookie::new("email", ""));
+
+    Redirect::to("/")
 }
