@@ -23,6 +23,7 @@
               postgresql
               rustc
               rustfmt
+              sqlx-cli
             ];
           };
         };
