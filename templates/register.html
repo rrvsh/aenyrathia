@@ -3,7 +3,7 @@
 {% block content %}
   <h1>Register</h1>
   <p>Note: Your full name and email will be used to author your changes.</p>
-  <form method="post" action="/register">
+  <form method="post" action="/register?redirect_to={{ redirect_path }}">
     <label>
       Full Name
       <input required name="fullname" placeholder="Mohammad Rafiq" autocomplete="name">

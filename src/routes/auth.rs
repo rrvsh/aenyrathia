@@ -5,7 +5,7 @@ use argon2::{
 use askama::Template;
 use axum::{
     Extension, Router,
-    extract::Form,
+    extract::{Form, Query},
     http::StatusCode,
     response::{Html, Redirect},
     routing::{get, post},
@@ -28,10 +28,21 @@ impl AuthRouter {
 
 #[derive(Template)]
 #[template(path = "register.html")]
-struct RegisterTemplate {}
+struct RegisterTemplate {
+    redirect_path: String,
+}
 
-pub async fn register_get() -> Result<Html<String>, StatusCode> {
-    RegisterTemplate {}.render().map_or_else(
+#[derive(Deserialize)]
+pub struct RedirectQuery {
+    redirect_to: Option<String>,
+}
+
+pub async fn register_get(
+    Query(params): Query<RedirectQuery>,
+) -> Result<Html<String>, StatusCode> {
+    let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
+
+    RegisterTemplate { redirect_path }.render().map_or_else(
         |e| {
             error!("Error rendering register template: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR)
@@ -77,10 +88,16 @@ pub async fn register_post(
 
 #[derive(Template)]
 #[template(path = "login.html")]
-struct LoginTemplate {}
+struct LoginTemplate {
+    redirect_path: String,
+}
 
-pub async fn login_get() -> Result<Html<String>, StatusCode> {
-    LoginTemplate {}.render().map_or_else(
+pub async fn login_get(
+    Query(params): Query<RedirectQuery>,
+) -> Result<Html<String>, StatusCode> {
+    let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
+
+    LoginTemplate { redirect_path }.render().map_or_else(
         |e| {
             error!("Error rendering register template: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR)
