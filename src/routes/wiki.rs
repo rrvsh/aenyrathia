@@ -1,6 +1,7 @@
 use crate::app::state::AppState;
 use crate::formatting::{normalise_newlines, resolve_article_path, resolve_branch_name};
 use crate::git::Author;
+use crate::filters;
 use askama::Template;
 use axum::Router;
 use axum::extract::Form;
@@ -10,7 +11,6 @@ use axum::response::Html;
 use axum::response::Redirect;
 use axum::routing::get;
 use log::error;
-use markdown::to_html;
 use serde::Deserialize;
 use tower_cookies::Cookies;
 
@@ -32,7 +32,6 @@ struct ArticleTemplate {
     full_name: Option<String>,
     edit_mode: bool,
     raw_file_content: String,
-    rendered_html: String,
 }
 
 #[derive(Deserialize)]
@@ -61,9 +60,7 @@ pub async fn article_get(
 
     let file_content = state.remote.read_file(&relative_path, Some(&branch_name));
     let mut raw_file_content = String::new();
-    let mut rendered_html = String::new();
     if let Some(file_content) = file_content {
-        rendered_html = to_html(&file_content);
         raw_file_content = file_content;
     } else if !edit_mode {
         return Err(StatusCode::NOT_FOUND);
@@ -72,7 +69,6 @@ pub async fn article_get(
         full_name,
         edit_mode,
         raw_file_content,
-        rendered_html,
     }
     .render()
     .map_or_else(

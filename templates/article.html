@@ -10,14 +10,21 @@
       {% endmatch %}
     </header>
     <div>
+      <div>
       {% if edit_mode %}
         <form method="post">
           <textarea name="markdown" rows="12" cols="80">{{ raw_file_content }}</textarea>
           <button>Send</button>
         </form>
       {% else %}
-        {{ rendered_html|safe }}
+        {{ raw_file_content | html | safe }}
       {% endif %}
+      </div>
+      <div>
+      {% if edit_mode %}
+        {{ raw_file_content | html | safe }}
+      {% endif %}
+      </div>
     </div>
   </body>
 </html>
