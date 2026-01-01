@@ -2,6 +2,7 @@ pub struct AppSettings {
     pub addr: String,
     pub git_remote: String,
     pub git_sync_interval_ms: u64,
+    pub db_url: String,
 }
 
 impl AppSettings {
@@ -15,10 +16,15 @@ impl AppSettings {
             .and_then(|v| v.parse::<u64>().ok())
             .filter(|v| *v > 0)
             .unwrap_or(1000);
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
+            "postgres://username:password@localhost:54322/default_database".to_string()
+        });
+
         Self {
             git_remote,
             addr: format!("{host}:{port}"),
             git_sync_interval_ms,
+            db_url,
         }
     }
 }
