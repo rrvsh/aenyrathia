@@ -28,7 +28,7 @@ impl WikiRouter {
 #[derive(Template)]
 #[template(path = "article.html")]
 struct ArticleTemplate {
-    username: Option<String>,
+    full_name: Option<String>,
     edit_mode: bool,
     raw_file_content: String,
     rendered_html: String,
@@ -46,13 +46,13 @@ pub async fn article_get(
     State(state): State<AppState>,
 ) -> Result<Html<String>, StatusCode> {
     let article_path = article_path.map(|Path(article_path)| article_path);
-    let username = cookies
-        .get("username")
+    let full_name = cookies
+        .get("full_name")
         .map(|cookie| cookie.value().to_string());
     let redirect_path = String::from("/") + &article_path.clone().unwrap_or_default();
     let relative_path = resolve_article_path(article_path);
-    let branch_name = resolve_branch_name(params.edit_mode, username.as_ref());
-    let edit_mode = if username.is_none() {
+    let branch_name = resolve_branch_name(params.edit_mode, full_name.as_ref());
+    let edit_mode = if full_name.is_none() {
         false
     } else {
         params.edit_mode.unwrap_or(false)
@@ -68,7 +68,7 @@ pub async fn article_get(
         return Err(StatusCode::NOT_FOUND);
     }
     ArticleTemplate {
-        username,
+        full_name,
         edit_mode,
         raw_file_content,
         rendered_html,
@@ -96,9 +96,9 @@ pub async fn article_post(
 ) -> Result<Redirect, StatusCode> {
     let article_path = article_path.map(|Path(article_path)| article_path);
     let redirect_path = String::from("/") + &article_path.clone().unwrap_or_default();
-    if let Some(username) = cookies.get("username") {
+    if let Some(full_name) = cookies.get("full_name") {
         let relative_path = resolve_article_path(article_path);
-        let branch_name = Some(format!("user/{}", username.value()));
+        let branch_name = Some(format!("user/{}", full_name.value()));
         let content = normalise_newlines(&form.markdown);
         match state
             .remote

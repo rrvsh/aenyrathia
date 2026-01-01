@@ -101,19 +101,21 @@ pub async fn login_post(
 ) -> Result<Redirect, StatusCode> {
     let LoginForm { email, password } = form;
 
-    let password_hash = sqlx::query!("select password_hash from user_data where email=$1", email)
-        .fetch_one(&*db)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .password_hash;
+    let result = sqlx::query!(
+        "select full_name, password_hash from user_data where email=$1",
+        email
+    )
+    .fetch_one(&*db)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let parsed_hash =
-        PasswordHash::new(&password_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        PasswordHash::new(&result.password_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok()
     {
-        cookies.add(Cookie::new("username", email));
+        cookies.add(Cookie::new("full_name", result.full_name));
         Ok(Redirect::to("/"))
     } else {
         Err(StatusCode::UNAUTHORIZED)
