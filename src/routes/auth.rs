@@ -1,9 +1,15 @@
+use argon2::{
+    Argon2,
+    password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
+};
 use askama::Template;
-use axum::Router;
-use axum::extract::Form;
-use axum::http::StatusCode;
-use axum::response::{Html, Redirect};
-use axum::routing::{get, post};
+use axum::{
+    Router,
+    extract::Form,
+    http::StatusCode,
+    response::{Html, Redirect},
+    routing::{get, post},
+};
 use log::error;
 use serde::Deserialize;
 use tower_cookies::{Cookie, Cookies};
@@ -61,6 +67,12 @@ pub async fn register_post(Form(form): Form<RegisterForm>) -> Result<Redirect, S
         email,
         password,
     } = form;
-    log::info!("Full Name: {fullname}, Email: {email}, Password: {password}");
-    Ok(Redirect::to("/"))
+
+    let salt = SaltString::generate(&mut OsRng);
+    Argon2::default()
+        .hash_password(password.as_bytes(), &salt)
+        .map_or(Err(StatusCode::INTERNAL_SERVER_ERROR), |password_hash| {
+            log::info!("Full Name: {fullname}, Email: {email}, Password Hash: {password_hash}");
+            Ok(Redirect::to("/"))
+        })
 }
