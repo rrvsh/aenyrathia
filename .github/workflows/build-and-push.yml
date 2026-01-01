@@ -65,6 +65,7 @@ jobs:
         with:
           project_id: aenyrathia
           workload_identity_provider: projects/620732881410/locations/global/workloadIdentityPools/github/providers/github
+          service_account: github-actions-ci@aenyrathia.iam.gserviceaccount.com
 
       - name: Deploy to Cloud Run
         id: deploy
