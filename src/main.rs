@@ -29,7 +29,7 @@ async fn main() {
         .connect(&settings.db_url)
         .await
         .expect("");
-    let _ = sqlx::migrate!().run(&db).await;
+    sqlx::migrate!().run(&db).await.expect("Migration failed!");
 
     let router = Router::new()
         .merge(AuthRouter::build())
