@@ -15,7 +15,7 @@ impl AuthRouter {
         Router::new()
             .route("/login", post(login))
             .route("/logout", post(logout))
-            .route("/register", get(register_get))
+            .route("/register", get(register_get).post(register_post))
     }
 }
 
@@ -46,4 +46,21 @@ pub async fn register_get() -> Result<Html<String>, StatusCode> {
         },
         |rendered| Ok(Html(rendered)),
     )
+}
+
+#[derive(Deserialize)]
+pub struct RegisterForm {
+    fullname: String,
+    email: String,
+    password: String,
+}
+
+pub async fn register_post(Form(form): Form<RegisterForm>) -> Result<Redirect, StatusCode> {
+    let RegisterForm {
+        fullname,
+        email,
+        password,
+    } = form;
+    log::info!("Full Name: {fullname}, Email: {email}, Password: {password}");
+    Ok(Redirect::to("/"))
 }
