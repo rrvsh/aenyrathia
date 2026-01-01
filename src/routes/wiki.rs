@@ -102,7 +102,7 @@ pub async fn article_post(
         let content = normalise_newlines(&form.markdown);
         match state
             .remote
-            .write_file(&relative_path, &content, Some(&branch_name))
+            .write_file(&relative_path, &content, Some(&branch_name), None)
         {
             Ok(()) => Ok(Redirect::to(&redirect_path)),
             Err(()) => Err(StatusCode::INTERNAL_SERVER_ERROR),
