@@ -20,8 +20,23 @@ pub fn resolve_branch_name(edit_mode: Option<bool>, full_name: Option<&String>) 
         full_name.map_or_else(
             || "prime".to_string(),
             |full_name| {
-                let full_name = full_name.replace(' ', "-").to_lowercase();
-                format!("user/{full_name}")
+                let mut s = full_name
+                    .to_lowercase()
+                    .chars()
+                    .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+                    .collect::<String>();
+
+                while s.contains("--") {
+                    s = s.replace("--", "-");
+                }
+
+                let full_name = s.trim_matches('-');
+
+                if full_name.is_empty() {
+                    "prime".to_string()
+                } else {
+                    format!("user/{full_name}")
+                }
             },
         )
     } else {
