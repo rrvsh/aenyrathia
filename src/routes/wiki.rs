@@ -98,11 +98,11 @@ pub async fn article_post(
     let redirect_path = String::from("/") + &article_path.clone().unwrap_or_default();
     if let Some(full_name) = cookies.get("full_name") {
         let relative_path = resolve_article_path(article_path);
-        let branch_name = Some(format!("user/{}", full_name.value()));
+        let branch_name = resolve_branch_name(Some(true), Some(&full_name.value().to_string()));
         let content = normalise_newlines(&form.markdown);
         match state
             .remote
-            .write_file(&relative_path, &content, branch_name.as_deref())
+            .write_file(&relative_path, &content, Some(&branch_name))
         {
             Ok(()) => Ok(Redirect::to(&redirect_path)),
             Err(()) => Err(StatusCode::INTERNAL_SERVER_ERROR),

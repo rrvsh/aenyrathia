@@ -16,11 +16,13 @@ pub fn resolve_article_path(article_path: Option<String>) -> String {
 /// Resolves branch name based on if user is logged in and in edit mode or not.
 /// Defaults to `prime` when `edit_mode` is `None` or false or `full_name` is None.
 pub fn resolve_branch_name(edit_mode: Option<bool>, full_name: Option<&String>) -> String {
-    let full_name = full_name.as_ref();
     if edit_mode.unwrap_or(false) {
         full_name.map_or_else(
             || "prime".to_string(),
-            |full_name| format!("user/{full_name}"),
+            |full_name| {
+                let full_name = full_name.replace(' ', "-").to_lowercase();
+                format!("user/{full_name}")
+            },
         )
     } else {
         "prime".to_string()
