@@ -21,7 +21,17 @@
   <div>
     <div>
     {% if edit_mode %}
-      <textarea name="markdown" rows="12" cols="80" hx-post="" hx-swap="none" hx-trigger="input delay:500ms">{{ raw_file_content }}</textarea>
+      <textarea
+        name="markdown"
+        rows="12"
+        cols="80"
+        hx-post=""
+        hx-swap="none"
+        hx-trigger="input delay:500ms"
+        oninput="document.getElementById('edit_status').innerHTML = 'Saving...'"
+        hx-on::after-request="document.getElementById('edit_status').innerHTML = 'Saved!'"
+      >{{ raw_file_content }}</textarea>
+      <span id="edit_status"></span>
     {% else %}
       {{ raw_file_content | html | safe }}
     {% endif %}
