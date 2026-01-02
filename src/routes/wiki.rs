@@ -92,9 +92,8 @@ pub async fn article_post(
     State(state): State<AppState>,
     cookies: Cookies,
     Form(form): Form<EditForm>,
-) -> Result<Redirect, StatusCode> {
+) -> StatusCode {
     let article_path = article_path.map(|Path(article_path)| article_path);
-    let redirect_path = String::from("/") + &article_path.clone().unwrap_or_default();
     if let Some(full_name) = cookies.get("full_name") {
         let relative_path = resolve_article_path(article_path);
         let branch_name = resolve_branch_name(Some(true), Some(&full_name.value().to_string()));
@@ -109,10 +108,10 @@ pub async fn article_post(
             Some(&branch_name),
             author.as_ref(),
         ) {
-            Ok(()) => Ok(Redirect::to(&redirect_path)),
-            Err(()) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            Ok(()) => StatusCode::NO_CONTENT,
+            Err(()) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     } else {
-        Ok(Redirect::to(&redirect_path))
+        StatusCode::NO_CONTENT
     }
 }
