@@ -12,7 +12,7 @@ use axum::response::Redirect;
 use axum::routing::get;
 use log::error;
 use serde::Deserialize;
-use tower_cookies::Cookies;
+use tower_cookies::{Cookie, Cookies};
 
 pub struct WikiRouter {}
 
@@ -35,15 +35,9 @@ struct ArticleTemplate {
     current_path: String,
 }
 
-#[derive(Deserialize)]
-pub struct EditModeQuery {
-    edit_mode: Option<bool>,
-}
-
 pub async fn article_get(
     cookies: Cookies,
     article_path: Option<Path<String>>,
-    Query(params): Query<EditModeQuery>,
     State(state): State<AppState>,
 ) -> Result<Html<String>, StatusCode> {
     let article_path = article_path.map(|Path(article_path)| article_path);
@@ -52,12 +46,19 @@ pub async fn article_get(
         .map(|cookie| cookie.value().to_string());
     let current_path = String::from("/") + &article_path.clone().unwrap_or_default();
     let relative_path = resolve_article_path(article_path);
-    let branch_name = resolve_branch_name(params.edit_mode, full_name.as_ref());
     let edit_mode = if full_name.is_none() {
         false
     } else {
-        params.edit_mode.unwrap_or(false)
+        cookies
+            .get("edit_mode")
+            .and_then(|cookie| match cookie.value() {
+                "true" => Some(true),
+                "false" => Some(false),
+                _ => None,
+            })
+            .unwrap_or(false)
     };
+    let branch_name = resolve_branch_name(Some(edit_mode), full_name.as_ref());
 
     let file_content = state.remote.read_file(&relative_path, Some(&branch_name));
     let mut raw_file_content = String::new();
