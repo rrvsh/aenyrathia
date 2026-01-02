@@ -1,17 +1,21 @@
-<h1>Register</h1>
-<p>Note: Your full name and email will be used to author your changes.</p>
-<form method="post" action="/register">
-  <label>
-    Full Name
-    <input required name="fullname" placeholder="Mohammad Rafiq" autocomplete="name">
-  </label>
-  <label>
-    Email
-    <input required name="email" type="email" placeholder="rafiq@rrv.sh" autocomplete="email">
-  </label>
-  <label>
-    Password
-    <input required name="password" type="password" autocomplete="new-password">
-  </label>
-  <button type="submit">Register</button>
-</form>
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Register</h1>
+  <p>Note: Your full name and email will be used to author your changes.</p>
+  <form method="post" action="/register?redirect_to={{ redirect_path }}">
+    <label>
+      Full Name
+      <input required name="fullname" placeholder="Mohammad Rafiq" autocomplete="name">
+    </label>
+    <label>
+      Email
+      <input required name="email" type="email" placeholder="rafiq@rrv.sh" autocomplete="email">
+    </label>
+    <label>
+      Password
+      <input required name="password" type="password" autocomplete="new-password">
+    </label>
+    <button type="submit">Register</button>
+  </form>
+{% endblock %}

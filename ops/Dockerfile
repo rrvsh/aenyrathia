@@ -17,8 +17,6 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends git openssh-client ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/aenyrathia .
-ENV PORT=3000
-ENV HOST=0.0.0.0
-ENV PB_LOG=TRACE
+COPY --from=builder /app/static ./static
 EXPOSE 3000
 ENTRYPOINT ["./aenyrathia"]

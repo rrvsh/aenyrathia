@@ -1,26 +1,45 @@
-<!DOCTYPE html>
-<html>
-  <body>
-    <header>
-      {% match username %}
-        {% when Some with (val) %}
-        signed in as: <a href="/logout">{{ val }}</a>
-        {% when None %}
-        <form method="post" action="/login">
-          <input name="username">
-          <button>Login</button>
-        </form>
-      {% endmatch %}
-    </header>
+{% extends "base.html" %}
+
+{% block content %}
+  <header>
+    {% match full_name %}
+      {% when Some with (val) %}
+      signed in as: {{ val }}
+      <form method="post" action="/logout?redirect_to={{ current_path }}">
+        <button type="submit">Logout</button>
+      </form>
+      <form method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
+        <button type="submit">
+          Toggle edit mode
+        </button>
+      </form>
+      {% when None %}
+      <a href="/login?redirect_to={{ current_path }}">Login</a>
+      <a href="/register?redirect_to={{ current_path }}">Register</a>
+    {% endmatch %}
+  </header>
+  <div>
     <div>
-      {% if edit_mode %}
-        <form method="post">
-          <textarea name="markdown" rows="12" cols="80">{{ raw_file_content }}</textarea>
-          <button>Send</button>
-        </form>
-      {% else %}
-        {{ rendered_html|safe }}
-      {% endif %}
+    {% if edit_mode %}
+      <textarea
+        name="markdown"
+        rows="12"
+        cols="80"
+        hx-post=""
+        hx-swap="none"
+        hx-trigger="input delay:500ms"
+        oninput="document.getElementById('edit_status').innerHTML = 'Saving...'"
+        hx-on::after-request="document.getElementById('edit_status').innerHTML = 'Saved!'"
+      >{{ raw_file_content }}</textarea>
+      <span id="edit_status"></span>
+    {% else %}
+      {{ raw_file_content | html | safe }}
+    {% endif %}
     </div>
-  </body>
-</html>
+    <div>
+    {% if edit_mode %}
+      {{ raw_file_content | html | safe }}
+    {% endif %}
+    </div>
+  </div>
+{% endblock %}

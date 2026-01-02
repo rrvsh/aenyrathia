@@ -16,6 +16,12 @@ fn path_editable<P: AsRef<Path>>(path: P) -> bool {
     path.is_file() || path.parent().is_some_and(std::path::Path::is_dir)
 }
 
+/// Author information for a commit.
+pub struct Author {
+    pub name: String,
+    pub email: String,
+}
+
 /// Lightweight handle for cloning, reading, and writing to a remote git repository.
 pub struct GitRemote {
     /// Keep tempdir alive so the cloned repo is not deleted.
@@ -104,6 +110,7 @@ impl GitRemote {
         relative_path: &str,
         content: &str,
         branch_name: Option<&str>,
+        author: Option<&Author>,
     ) -> Result<(), ()> {
         let repo = Repository::open(&self.repo_directory).map_err(|_| ())?;
         let branch_name = branch_name.unwrap_or("prime");
@@ -160,10 +167,13 @@ impl GitRemote {
             .find_reference(&format!("refs/heads/{branch_name}"))
             .map_err(|_| ())?;
         let parent_commit = parent_reference.peel_to_commit().map_err(|_| ())?;
-        let signature = repo.signature().unwrap_or_else(|_| {
-            Signature::now("aenyrathia.wiki", "git@aenyrathia.wiki")
-                .expect("Failed to create fallback signature")
-        });
+        let signature = author
+            .and_then(|author| Signature::now(&author.name, &author.email).ok())
+            .or_else(|| repo.signature().ok())
+            .unwrap_or_else(|| {
+                Signature::now("aenyrathia.wiki", "git@aenyrathia.wiki")
+                    .expect("Failed to create fallback signature")
+            });
         repo.commit(
             Some(&format!("refs/heads/{branch_name}")),
             &signature,
@@ -233,11 +243,8 @@ fn fetch_all(repo: &Repository) -> Result<(), git2::Error> {
     let mut remote = repo.find_remote("origin")?;
     let mut options = FetchOptions::new();
     options.remote_callbacks(ssh_callbacks());
-    trace!("Background fetch: starting");
     let refspecs: &[&str] = &["refs/heads/*:refs/remotes/origin/*"];
-    let result = remote.fetch(refspecs, Some(&mut options), None);
-    trace!("Background fetch: done");
-    result
+    remote.fetch(refspecs, Some(&mut options), None)
 }
 
 fn push_all_branches(repo: &Repository) -> Result<(), git2::Error> {

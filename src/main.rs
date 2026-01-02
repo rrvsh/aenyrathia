@@ -8,9 +8,11 @@ use sqlx::postgres::PgPoolOptions;
 use std::time::Duration;
 use tower_cookies::CookieManagerLayer;
 use tower_http::normalize_path::NormalizePath;
+use tower_http::services::ServeDir;
 use tower_http::timeout::TimeoutLayer;
 
 mod app;
+mod filters;
 mod formatting;
 mod git;
 mod routes;
@@ -26,14 +28,15 @@ async fn main() {
 
     let db = PgPoolOptions::new()
         .max_connections(20)
-        .connect(&settings.db_url)
+        .connect_with(settings.db_options.clone())
         .await
-        .expect("");
+        .expect("Connnecting to database failed!");
     sqlx::migrate!().run(&db).await.expect("Migration failed!");
 
     let router = Router::new()
         .merge(AuthRouter::build())
         .merge(WikiRouter::build(state))
+        .nest_service("/static", ServeDir::new("static"))
         .layer((
             CookieManagerLayer::new(),
             TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, Duration::from_secs(10)),
