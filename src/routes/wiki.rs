@@ -32,6 +32,7 @@ struct ArticleTemplate {
     full_name: Option<String>,
     edit_mode: bool,
     raw_file_content: String,
+    current_path: String,
 }
 
 #[derive(Deserialize)]
@@ -49,7 +50,7 @@ pub async fn article_get(
     let full_name = cookies
         .get("full_name")
         .map(|cookie| cookie.value().to_string());
-    let redirect_path = String::from("/") + &article_path.clone().unwrap_or_default();
+    let current_path = String::from("/") + &article_path.clone().unwrap_or_default();
     let relative_path = resolve_article_path(article_path);
     let branch_name = resolve_branch_name(params.edit_mode, full_name.as_ref());
     let edit_mode = if full_name.is_none() {
@@ -69,11 +70,12 @@ pub async fn article_get(
         full_name,
         edit_mode,
         raw_file_content,
+        current_path: current_path.clone(),
     }
     .render()
     .map_or_else(
         |e| {
-            error!("Error rendering template for {redirect_path}: {e}");
+            error!("Error rendering template for {current_path}: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         },
         |rendered| Ok(Html(rendered)),

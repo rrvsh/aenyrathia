@@ -2,7 +2,7 @@
 
 {% block content %}
   <h1>Login</h1>
-  <form method="post" action="/login">
+  <form method="post" action="/login?redirect_to={{ redirect_path }}">
     <label>
       Email
       <input required name="email" type="email" placeholder="rafiq@rrv.sh" autocomplete="email">
