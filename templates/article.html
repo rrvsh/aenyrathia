@@ -21,10 +21,7 @@
   <div>
     <div>
     {% if edit_mode %}
-      <form method="post">
-        <textarea name="markdown" rows="12" cols="80">{{ raw_file_content }}</textarea>
-        <button>Send</button>
-      </form>
+      <textarea name="markdown" rows="12" cols="80" hx-post="" hx-swap="none" hx-trigger="input delay:500ms">{{ raw_file_content }}</textarea>
     {% else %}
       {{ raw_file_content | html | safe }}
     {% endif %}
