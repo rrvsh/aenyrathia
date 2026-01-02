@@ -9,7 +9,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::Html;
 use axum::response::Redirect;
-use axum::routing::get;
+use axum::routing::{get, post};
 use log::error;
 use serde::Deserialize;
 use tower_cookies::{Cookie, Cookies};
@@ -20,6 +20,7 @@ impl WikiRouter {
     pub fn build(state: AppState) -> Router {
         let handlers = get(article_get).post(article_post);
         Router::new()
+            .route("/edit-mode/toggle", post(toggle_edit_mode))
             .route("/", handlers.clone())
             .route("/{*article_path}", handlers)
             .with_state(state)
@@ -86,6 +87,29 @@ pub async fn article_get(
 #[derive(Deserialize)]
 pub struct EditForm {
     markdown: String,
+}
+
+#[derive(Deserialize)]
+pub struct RedirectQuery {
+    redirect_to: Option<String>,
+}
+
+pub async fn toggle_edit_mode(cookies: Cookies, Query(params): Query<RedirectQuery>) -> Redirect {
+    let current = cookies
+        .get("edit_mode")
+        .and_then(|cookie| match cookie.value() {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        })
+        .unwrap_or(false);
+
+    let mut updated = Cookie::new("edit_mode", (!current).to_string());
+    updated.set_path("/");
+    cookies.add(updated);
+
+    let redirect = params.redirect_to.unwrap_or_else(|| "/".to_string());
+    Redirect::to(&redirect)
 }
 
 pub async fn article_post(
