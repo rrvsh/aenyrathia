@@ -1,6 +1,6 @@
 use git2::{
-    BranchType, Cred, FetchOptions, PushOptions, RemoteCallbacks, Repository, Signature,
-    build::CheckoutBuilder,
+    BranchType, Cred, FetchOptions, MergeOptions, PushOptions, RemoteCallbacks, Repository,
+    Signature, build::CheckoutBuilder,
 };
 use log::{trace, warn};
 use std::env;
@@ -235,6 +235,7 @@ fn ssh_callbacks<'cb>() -> RemoteCallbacks<'cb> {
 fn sync_once(repo_directory: &Path) -> Result<(), git2::Error> {
     let repo = Repository::open(repo_directory)?;
     fetch_all(&repo)?;
+    merge_prime_into_user_branches(&repo)?;
     push_all_branches(&repo)?;
     Ok(())
 }
@@ -245,6 +246,62 @@ fn fetch_all(repo: &Repository) -> Result<(), git2::Error> {
     options.remote_callbacks(ssh_callbacks());
     let refspecs: &[&str] = &["refs/heads/*:refs/remotes/origin/*"];
     remote.fetch(refspecs, Some(&mut options), None)
+}
+
+/// Merge the latest `prime` changes into all `user/*` branches, fast-forwarding when possible.
+fn merge_prime_into_user_branches(repo: &Repository) -> Result<(), git2::Error> {
+    let prime_ref = match repo.find_reference("refs/remotes/origin/prime") {
+        Ok(prime) => prime,
+        Err(err) => {
+            warn!("Skipping merge into user branches: cannot find origin/prime: {err}");
+            return Ok(());
+        }
+    };
+    let prime_commit = prime_ref.peel_to_commit()?;
+
+    for branch_result in repo.branches(Some(BranchType::Local))? {
+        let (branch, _) = branch_result?;
+        let branch_name = match branch.name()? {
+            Some(name) if name.starts_with("user/") => name.to_string(),
+            _ => continue,
+        };
+
+        // Avoid churn when branch already contains prime.
+        let branch_commit = branch.get().peel_to_commit()?;
+        let (ahead, behind) = repo.graph_ahead_behind(branch_commit.id(), prime_commit.id())?;
+        if behind == 0 {
+            continue;
+        }
+
+        // If branch can fast-forward, do so; otherwise create a merge commit.
+        if behind > 0 && ahead == 0 {
+            branch
+                .into_reference()
+                .set_target(prime_commit.id(), "fast-forward to prime")?;
+            continue;
+        }
+
+        let mut merge_opts = MergeOptions::new();
+        merge_opts.file_favor(git2::FileFavor::Ours);
+
+        let mut index = repo.merge_commits(&branch_commit, &prime_commit, Some(&merge_opts))?;
+
+        let tree_id = index.write_tree_to(repo)?;
+        let tree = repo.find_tree(tree_id)?;
+        let sig = repo.signature()?;
+        let commit_oid = repo.commit(
+            Some(&format!("refs/heads/{branch_name}")),
+            &sig,
+            &sig,
+            &format!("Merge prime into {branch_name}"),
+            &tree,
+            &[&branch_commit, &prime_commit],
+        )?;
+
+        trace!("Merged prime into {branch_name} at commit {commit_oid}");
+    }
+
+    Ok(())
 }
 
 fn push_all_branches(repo: &Repository) -> Result<(), git2::Error> {
