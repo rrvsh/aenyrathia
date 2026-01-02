@@ -9,10 +9,10 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::Html;
 use axum::response::Redirect;
-use axum::routing::get;
+use axum::routing::{get, post};
 use log::error;
 use serde::Deserialize;
-use tower_cookies::Cookies;
+use tower_cookies::{Cookie, Cookies};
 
 pub struct WikiRouter {}
 
@@ -20,6 +20,7 @@ impl WikiRouter {
     pub fn build(state: AppState) -> Router {
         let handlers = get(article_get).post(article_post);
         Router::new()
+            .route("/edit-mode/toggle", post(toggle_edit_mode))
             .route("/", handlers.clone())
             .route("/{*article_path}", handlers)
             .with_state(state)
@@ -35,15 +36,9 @@ struct ArticleTemplate {
     current_path: String,
 }
 
-#[derive(Deserialize)]
-pub struct EditModeQuery {
-    edit_mode: Option<bool>,
-}
-
 pub async fn article_get(
     cookies: Cookies,
     article_path: Option<Path<String>>,
-    Query(params): Query<EditModeQuery>,
     State(state): State<AppState>,
 ) -> Result<Html<String>, StatusCode> {
     let article_path = article_path.map(|Path(article_path)| article_path);
@@ -52,12 +47,19 @@ pub async fn article_get(
         .map(|cookie| cookie.value().to_string());
     let current_path = String::from("/") + &article_path.clone().unwrap_or_default();
     let relative_path = resolve_article_path(article_path);
-    let branch_name = resolve_branch_name(params.edit_mode, full_name.as_ref());
     let edit_mode = if full_name.is_none() {
         false
     } else {
-        params.edit_mode.unwrap_or(false)
+        cookies
+            .get("edit_mode")
+            .and_then(|cookie| match cookie.value() {
+                "true" => Some(true),
+                "false" => Some(false),
+                _ => None,
+            })
+            .unwrap_or(false)
     };
+    let branch_name = resolve_branch_name(Some(edit_mode), full_name.as_ref());
 
     let file_content = state.remote.read_file(&relative_path, Some(&branch_name));
     let mut raw_file_content = String::new();
@@ -85,6 +87,29 @@ pub async fn article_get(
 #[derive(Deserialize)]
 pub struct EditForm {
     markdown: String,
+}
+
+#[derive(Deserialize)]
+pub struct RedirectQuery {
+    redirect_to: Option<String>,
+}
+
+pub async fn toggle_edit_mode(cookies: Cookies, Query(params): Query<RedirectQuery>) -> Redirect {
+    let current = cookies
+        .get("edit_mode")
+        .and_then(|cookie| match cookie.value() {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        })
+        .unwrap_or(false);
+
+    let mut updated = Cookie::new("edit_mode", (!current).to_string());
+    updated.set_path("/");
+    cookies.add(updated);
+
+    let redirect = params.redirect_to.unwrap_or_else(|| "/".to_string());
+    Redirect::to(&redirect)
 }
 
 pub async fn article_post(

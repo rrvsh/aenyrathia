@@ -8,6 +8,11 @@
       <form method="post" action="/logout?redirect_to={{ current_path }}">
         <button type="submit">Logout</button>
       </form>
+      <form method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
+        <button type="submit">
+          Toggle edit mode
+        </button>
+      </form>
       {% when None %}
       <a href="/login?redirect_to={{ current_path }}">Login</a>
       <a href="/register?redirect_to={{ current_path }}">Register</a>
