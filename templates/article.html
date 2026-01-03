@@ -1,25 +1,30 @@
 {% extends "base.html" %}
 
-{% block content %}
-  <header>
-    {% match full_name %}
-      {% when Some with (val) %}
-      signed in as: {{ val }}
+{% block header %}
+  {% match full_name %}
+    {% when Some with (val) %}
+    <div>
+      <span>signed in as: {{ val }}</span>
       <form method="post" action="/logout?redirect_to={{ current_path }}">
         <button type="submit">Logout</button>
       </form>
-      <form method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
-        <button type="submit">
-          Toggle edit mode
-        </button>
-      </form>
-      {% when None %}
+    </div>
+    <form method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
+      <button type="submit">
+        Toggle edit mode
+      </button>
+    </form>
+    {% when None %}
+    <div>
       <a href="/login?redirect_to={{ current_path }}">Login</a>
       <a href="/register?redirect_to={{ current_path }}">Register</a>
-    {% endmatch %}
-  </header>
+    </div>
+  {% endmatch %}
+{% endblock %}
+
+{% block content %}
+  <div></div>
   <div>
-    <div>
     {% if edit_mode %}
       <textarea
         name="markdown"
@@ -35,11 +40,10 @@
     {% else %}
       {{ raw_file_content | html | safe }}
     {% endif %}
-    </div>
-    <div>
+  </div>
+  <div>
     {% if edit_mode %}
       {{ raw_file_content | html | safe }}
     {% endif %}
-    </div>
   </div>
 {% endblock %}
