@@ -1,6 +1,134 @@
-:root {
-  background: black;
-  color: white;
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0d1117;
+  color: #e6edf3;
+}
+
+a {
+  color: #8ab4ff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.page {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 280px;
+  background: #111827;
+  border-right: 1px solid #1f2937;
+  padding: 1rem;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.sidebar__header {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.02em;
+}
+
+.new-file {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.new-file input,
+.new-file textarea {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #1f2937;
+  background: #0b1220;
+  color: #e6edf3;
+}
+
+.new-file button {
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #1f2937;
+  background: #1f2937;
+  color: #e6edf3;
+  cursor: pointer;
+}
+
+.file-tree {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.file-tree__item {
+  margin: 0.2rem 0;
+}
+
+.file-tree__dir > summary {
+  cursor: pointer;
+  padding: 0.1rem 0.15rem;
+  border-radius: 4px;
+}
+
+.file-tree__dir[open] > summary {
+  background: #0b1220;
+}
+
+.file-tree__link {
+  display: block;
+  padding: 0.1rem 0.25rem;
+  border-radius: 4px;
+}
+
+.file-tree__link.active {
+  background: #1f2937;
+  color: #fff;
+  font-weight: 600;
+}
+
+.article__editor textarea {
+  width: 100%;
+  min-height: 70vh;
+  background: #0b1220;
+  color: #e6edf3;
+  border: 1px solid #1f2937;
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.article__preview {
+  border: 1px solid #1f2937;
+  padding: 1rem;
+  border-radius: 6px;
+  background: #0b1220;
+}
+
+@media (max-width: 900px) {
+  .page {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    position: relative;
+    height: auto;
+    width: 100%;
+  }
+
+  .article {
+    grid-template-columns: 1fr;
+  }
 }
 
 .nanum-myeongjo-regular {
