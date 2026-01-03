@@ -23,27 +23,32 @@
 {% endblock %}
 
 {% block content %}
+  <aside class="sidebar">
+    <div class="sidebar__header">Files</div>
+    {{ file_tree_html | safe }}
+  </aside>
+  <div class="article__editor">
+  {% if edit_mode %}
+    <textarea
+      name="markdown"
+      rows="12"
+      cols="80"
+      hx-post=""
+      hx-swap="none"
+      hx-trigger="input delay:500ms"
+      oninput="document.getElementById('edit_status').innerHTML = 'Saving...'"
+      hx-on::after-request="document.getElementById('edit_status').innerHTML = 'Saved!'"
+    >{{ raw_file_content }}</textarea>
+    <span id="edit_status"></span>
+  {% else %}
+    {{ raw_file_content | html | safe }}
+  {% endif %}
+  </div>
+  {% if edit_mode %}
+  <div class="article__preview">
+    {{ raw_file_content | html | safe }}
+  </div>
+  {% else %}
   <div></div>
-  <div>
-    {% if edit_mode %}
-      <textarea
-        name="markdown"
-        rows="12"
-        cols="80"
-        hx-post=""
-        hx-swap="none"
-        hx-trigger="input delay:500ms"
-        oninput="document.getElementById('edit_status').innerHTML = 'Saving...'"
-        hx-on::after-request="document.getElementById('edit_status').innerHTML = 'Saved!'"
-      >{{ raw_file_content }}</textarea>
-      <span id="edit_status"></span>
-    {% else %}
-      {{ raw_file_content | html | safe }}
-    {% endif %}
-  </div>
-  <div>
-    {% if edit_mode %}
-      {{ raw_file_content | html | safe }}
-    {% endif %}
-  </div>
+  {% endif %}
 {% endblock %}

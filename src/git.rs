@@ -1,6 +1,6 @@
 use git2::{
-    BranchType, Cred, FetchOptions, MergeOptions, PushOptions, RemoteCallbacks, Repository,
-    Signature, build::CheckoutBuilder,
+    BranchType, Cred, FetchOptions, MergeOptions, ObjectType, PushOptions, RemoteCallbacks,
+    Repository, Signature, build::CheckoutBuilder,
 };
 use log::{trace, warn};
 use std::env;
@@ -102,6 +102,29 @@ impl GitRemote {
             reference.name()
         );
         Some(blob_content.to_string())
+    }
+
+    /// Return a list of markdown file paths (relative to `base_dir`) on the given branch.
+    /// The paths use forward slashes and include subdirectories, e.g. `notes/todo.md`.
+    pub fn list_markdown_paths(
+        &self,
+        base_dir: &str,
+        branch_name: Option<&str>,
+    ) -> Option<Vec<String>> {
+        let repo = Repository::open(&self.repo_directory).ok()?;
+        let branch_name = branch_name.unwrap_or("prime");
+        let reference = repo
+            .find_reference(&format!("refs/remotes/origin/{branch_name}"))
+            .or_else(|_| repo.find_reference("refs/remotes/origin/prime"))
+            .ok()?;
+        let commit = reference.peel_to_commit().ok()?;
+        let tree = commit.tree().ok()?;
+        let base_entry = tree.get_path(Path::new(base_dir)).ok()?;
+        let base_tree = repo.find_tree(base_entry.id()).ok()?;
+
+        let mut paths = Vec::new();
+        collect_markdown_paths(&repo, &base_tree, Path::new(""), &mut paths);
+        Some(paths)
     }
 
     /// Ensure remote is current, check out target branch, write, commit, and push content.
@@ -216,6 +239,39 @@ impl GitRemote {
             })
             .expect("Failed to start git sync worker");
         self
+    }
+}
+
+/// Recursively gather `.md` paths from a git tree.
+fn collect_markdown_paths(
+    repo: &Repository,
+    tree: &git2::Tree,
+    prefix: &Path,
+    output: &mut Vec<String>,
+) {
+    let mut entries: Vec<_> = tree.iter().collect();
+    entries.sort_by_key(|entry| entry.name().unwrap_or("").to_lowercase());
+
+    for entry in entries {
+        let Some(name) = entry.name() else { continue };
+
+        match entry.kind() {
+            Some(ObjectType::Tree) => {
+                if let Ok(subtree) = repo.find_tree(entry.id()) {
+                    collect_markdown_paths(repo, &subtree, &prefix.join(name), output);
+                }
+            }
+            Some(ObjectType::Blob) => {
+                if std::path::Path::new(name)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+                {
+                    let relative_path = prefix.join(name);
+                    output.push(relative_path.to_string_lossy().replace('\\', "/"));
+                }
+            }
+            _ => {}
+        }
     }
 }
 
