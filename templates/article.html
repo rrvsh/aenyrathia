@@ -3,14 +3,14 @@
 {% block header %}
   {% match full_name %}
     {% when Some with (val) %}
-    <div>
+    <div class="header-actions">
       <span>signed in as: {{ val }}</span>
-      <form method="post" action="/logout?redirect_to={{ current_path }}">
-        <button type="submit">Logout</button>
+      <form class="header-actions__form" method="post" action="/logout?redirect_to={{ current_path }}">
+        <button class="btn btn--ghost btn--small" type="submit">Logout</button>
       </form>
     </div>
-    <form method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
-      <button type="submit">
+    <form class="header-actions__form" method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
+      <button class="btn btn--ghost btn--small" type="submit">
         {% if edit_mode %}
         Switch to public view
         {% else %}
@@ -32,15 +32,16 @@
       <div class="sidebar__header">Files</div>
       {{ file_tree_html | safe }}
       {% if edit_mode %}
-      <form class="new-file" onsubmit="goToNewPath(event)">
-        <label for="new_path">New file path</label>
+      <form class="new-file form-grid" onsubmit="goToNewPath(event)">
+        <label class="form-label" for="new_path">New file path</label>
         <input
+          class="form-control"
           id="new_path"
           type="text"
           placeholder="folder/page-name"
           required
         />
-        <button type="submit">Create & edit</button>
+        <button class="btn btn--primary" type="submit">Create & edit</button>
       </form>
       {% endif %}
     </aside>
@@ -48,6 +49,7 @@
       <div class="article__editor">
       {% if edit_mode %}
         <textarea
+          class="form-control form-control--textarea form-control--mono"
           name="markdown"
           rows="12"
           cols="80"

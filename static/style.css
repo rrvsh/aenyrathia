@@ -6,6 +6,9 @@
   --color-text: #e6edf3;
   --color-text-strong: #ffffff;
   --color-link: #8ab4ff;
+  --color-accent: #7ea6ff;
+  --color-accent-strong: #a8c4ff;
+  --color-focus-ring: rgba(138, 180, 255, 0.35);
 
   --space-1: 0.1rem;
   --space-2: 0.2rem;
@@ -104,6 +107,17 @@ body {
   padding: 0 0 var(--space-9);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.header-actions__form {
+  margin: 0;
+}
+
 .page-grid {
   display: grid;
   grid-template-columns: minmax(0, var(--sidebar-width)) minmax(0, 1fr);
@@ -120,6 +134,119 @@ body {
 
 .article--single {
   grid-template-columns: 1fr;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-9);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: var(--font-weight-semibold);
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn:hover {
+  background: var(--color-surface);
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.btn--primary {
+  background: linear-gradient(120deg, var(--color-link), var(--color-accent));
+  border-color: var(--color-accent);
+  color: var(--color-text-strong);
+}
+
+.btn--primary:hover {
+  background: linear-gradient(120deg, var(--color-accent), var(--color-accent-strong));
+}
+
+.btn--ghost {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.btn--ghost:hover {
+  border-color: var(--color-accent);
+}
+
+.btn--small {
+  padding: var(--space-5) var(--space-7);
+  font-size: var(--text-sm);
+}
+
+.form-card {
+  background: var(--color-surface-strong);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: calc(var(--space-9) * 1.5);
+  display: grid;
+  gap: var(--space-8);
+  max-width: 520px;
+  box-shadow: var(--shadow-soft);
+}
+
+.form-grid {
+  display: grid;
+  gap: var(--space-7);
+}
+
+.form-label {
+  display: grid;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.form-help {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: rgba(230, 237, 243, 0.8);
+}
+
+.form-control {
+  width: 100%;
+  padding: var(--space-6) var(--space-8);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.form-control:hover {
+  border-color: var(--color-accent);
+}
+
+.form-control:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.form-control--textarea {
+  min-height: 12rem;
+  resize: vertical;
+}
+
+.form-control--mono {
+  font-family: var(--font-mono);
 }
 
 h1,
@@ -184,25 +311,6 @@ a:hover {
   gap: var(--space-4);
 }
 
-.new-file input,
-.new-file textarea {
-  width: 100%;
-  padding: var(--space-5) var(--space-7);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
-}
-
-.new-file button {
-  padding: var(--space-5) var(--space-8);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
-  background: var(--color-border);
-  color: var(--color-text);
-  cursor: pointer;
-}
-
 .file-tree {
   list-style: none;
   padding-left: 0;
@@ -235,15 +343,10 @@ a:hover {
   font-weight: var(--font-weight-bold);
 }
 
-.article__editor textarea {
+.article__editor .form-control {
   width: 100%;
   min-height: 70vh;
-  background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   padding: var(--space-8);
-  font-family: var(--font-mono);
 }
 
 .article__preview {
