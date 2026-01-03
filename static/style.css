@@ -1,3 +1,11 @@
+/*
+  Design tokens & components:
+  - Tokens: color, spacing, radius, typography scale, shadows, transitions, and breakpoints under :root.
+  - Layout: .container, .site-header/.site-main, .page-grid, .sidebar (+ mobile toggle), and .article grids.
+  - Controls: .btn variants, .form-control + modifiers, alerts/status, and auth/editor form helpers.
+  - Navigation: file-tree states/carets and responsive sidebar behavior.
+  Extend by reusing tokens and component modifiers; avoid hard-coded values to keep the system consistent.
+*/
 :root {
   --color-bg: #0d1117;
   --color-surface: #0b1220;
@@ -510,10 +518,4 @@ a:hover {
     min-height: 45vh;
     max-height: 65vh;
   }
-}
-
-.nanum-myeongjo-regular {
-  font-family: var(--font-serif);
-  font-weight: var(--font-weight-regular);
-  font-style: normal;
 }
