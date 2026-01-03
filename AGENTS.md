@@ -53,6 +53,7 @@ Source: https://google.github.io/eng-practices/review/developer/small-cls.html
 - 2026-01-03: Task 4 (Form & control components) completed—button/input/textarea system with focus styles applied to auth forms, sidebar creation, and article editor; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 - 2026-01-03: Task 5 (File tree polish) completed—added caret icons, hover/focus/active states, and nested indentation for the file tree; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 - 2026-01-03: Task 6 (Feedback & htmx messaging) completed—added alert/status styles and contextual htmx save messaging for the editor; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
+- 2026-01-03: Task 7 (Responsive refinements) completed—sidebar toggle for mobile, tightened gaps, and mobile textarea caps while columns stack under 900px; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 
 ## Network requests (deferred)
 - None pending.  

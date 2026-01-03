@@ -361,6 +361,10 @@ a:hover {
   max-height: calc(100vh - (var(--space-9) * 2));
 }
 
+.sidebar-toggle {
+  display: none;
+}
+
 .sidebar__header {
   font-weight: var(--font-weight-bold);
   margin-bottom: var(--space-6);
@@ -479,16 +483,32 @@ a:hover {
 
   .page-grid {
     grid-template-columns: 1fr;
+    gap: var(--space-7);
   }
 
   .sidebar {
+    display: none;
     position: relative;
     max-height: none;
     width: 100%;
   }
 
+  .sidebar.sidebar--open {
+    display: block;
+  }
+
+  .sidebar-toggle {
+    display: inline-flex;
+    margin-bottom: var(--space-6);
+  }
+
   .article {
     grid-template-columns: 1fr;
+  }
+
+  .article__editor .form-control {
+    min-height: 45vh;
+    max-height: 65vh;
   }
 }
 

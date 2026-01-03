@@ -27,8 +27,17 @@
 {% endblock %}
 
 {% block content %}
+  <button
+    class="sidebar-toggle btn btn--ghost btn--small"
+    type="button"
+    id="sidebar_toggle"
+    aria-controls="sidebar"
+    aria-expanded="false"
+  >
+    Toggle files
+  </button>
   <div class="page-grid">
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar__header">Files</div>
       {{ file_tree_html | safe }}
       {% if edit_mode %}
@@ -104,6 +113,19 @@
     }
 
     setEditStatus("idle");
+
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebar_toggle");
+
+    function toggleSidebar() {
+      if (!sidebar || !sidebarToggle) return;
+      const isOpen = sidebar.classList.toggle("sidebar--open");
+      sidebarToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener("click", toggleSidebar);
+    }
 
     function goToNewPath(e) {
       e.preventDefault();
