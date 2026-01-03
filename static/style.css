@@ -1,16 +1,53 @@
+:root {
+  --color-bg: #0d1117;
+  --color-surface: #0b1220;
+  --color-surface-strong: #111827;
+  --color-border: #1f2937;
+  --color-text: #e6edf3;
+  --color-text-strong: #ffffff;
+  --color-link: #8ab4ff;
+
+  --space-1: 0.1rem;
+  --space-2: 0.2rem;
+  --space-2-5: 0.15rem;
+  --space-3: 0.25rem;
+  --space-4: 0.4rem;
+  --space-5: 0.45rem;
+  --space-6: 0.5rem;
+  --space-7: 0.55rem;
+  --space-8: 0.75rem;
+  --space-9: 1rem;
+  --space-gap: 1em;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.25);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-serif: "Nanum Myeongjo", serif;
+  --font-mono: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+
+  --transition-fast: 150ms ease;
+  --sidebar-width: 280px;
+  --bp-medium: 900px;
+}
+
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #0d1117;
-  color: #e6edf3;
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
 }
 
 a {
-  color: #8ab4ff;
+  color: var(--color-link);
   text-decoration: none;
 }
 
@@ -24,10 +61,10 @@ a:hover {
 }
 
 .sidebar {
-  width: 280px;
-  background: #111827;
-  border-right: 1px solid #1f2937;
-  padding: 1rem;
+  width: var(--sidebar-width);
+  background: var(--color-surface-strong);
+  border-right: 1px solid var(--color-border);
+  padding: var(--space-9);
   overflow-y: auto;
   position: sticky;
   top: 0;
@@ -35,33 +72,33 @@ a:hover {
 }
 
 .sidebar__header {
-  font-weight: 700;
-  margin-bottom: 0.5rem;
+  font-weight: var(--font-weight-bold);
+  margin-bottom: var(--space-6);
   letter-spacing: 0.02em;
 }
 
 .new-file {
-  margin-top: 1rem;
+  margin-top: var(--space-9);
   display: grid;
-  gap: 0.4rem;
+  gap: var(--space-4);
 }
 
 .new-file input,
 .new-file textarea {
   width: 100%;
-  padding: 0.45rem 0.55rem;
-  border-radius: 6px;
-  border: 1px solid #1f2937;
-  background: #0b1220;
-  color: #e6edf3;
+  padding: var(--space-5) var(--space-7);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .new-file button {
-  padding: 0.45rem 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #1f2937;
-  background: #1f2937;
-  color: #e6edf3;
+  padding: var(--space-5) var(--space-8);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-border);
+  color: var(--color-text);
   cursor: pointer;
 }
 
@@ -72,50 +109,50 @@ a:hover {
 }
 
 .file-tree__item {
-  margin: 0.2rem 0;
+  margin: var(--space-2) 0;
 }
 
 .file-tree__dir > summary {
   cursor: pointer;
-  padding: 0.1rem 0.15rem;
-  border-radius: 4px;
+  padding: var(--space-1) var(--space-2-5);
+  border-radius: var(--radius-sm);
 }
 
 .file-tree__dir[open] > summary {
-  background: #0b1220;
+  background: var(--color-surface);
 }
 
 .file-tree__link {
   display: block;
-  padding: 0.1rem 0.25rem;
-  border-radius: 4px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
 }
 
 .file-tree__link.active {
-  background: #1f2937;
-  color: #fff;
-  font-weight: 600;
+  background: var(--color-border);
+  color: var(--color-text-strong);
+  font-weight: var(--font-weight-bold);
 }
 
 .article__editor textarea {
   width: 100%;
   min-height: 70vh;
-  background: #0b1220;
-  color: #e6edf3;
-  border: 1px solid #1f2937;
-  border-radius: 6px;
-  padding: 0.75rem;
-  font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-8);
+  font-family: var(--font-mono);
 }
 
 .article__preview {
-  border: 1px solid #1f2937;
-  padding: 1rem;
-  border-radius: 6px;
-  background: #0b1220;
+  border: 1px solid var(--color-border);
+  padding: var(--space-9);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
-@media (max-width: 900px) {
+@media (max-width: var(--bp-medium)) {
   .page {
     flex-direction: column;
   }
@@ -132,8 +169,8 @@ a:hover {
 }
 
 .nanum-myeongjo-regular {
-  font-family: "Nanum Myeongjo", serif;
-  font-weight: 400;
+  font-family: var(--font-serif);
+  font-weight: var(--font-weight-regular);
   font-style: normal;
 }
 
@@ -141,5 +178,5 @@ a:hover {
   display: grid;
   grid-auto-columns: 1fr;
   grid-auto-flow: column;
-  gap: 1em;
+  gap: var(--space-gap);
 }
