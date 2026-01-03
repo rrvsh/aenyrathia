@@ -3,12 +3,11 @@ use crate::filters;
 use crate::formatting::{normalise_newlines, resolve_article_path, resolve_branch_name};
 use crate::git::Author;
 use askama::Template;
+use axum::response::{Html, Redirect, Response, IntoResponse};
 use axum::Router;
 use axum::extract::Form;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::response::Html;
-use axum::response::Redirect;
 use axum::routing::{get, post};
 use log::{error, trace};
 use serde::Deserialize;
@@ -22,6 +21,7 @@ impl WikiRouter {
     pub fn build(state: AppState) -> Router {
         let handlers = get(article_get).post(article_post);
         Router::new()
+            .route("/preview", post(preview_markdown))
             .route("/edit-mode/toggle", post(toggle_edit_mode))
             .route("/", handlers.clone())
             .route("/{*article_path}", handlers)
@@ -60,7 +60,7 @@ pub async fn article_get(
     cookies: Cookies,
     article_path: Option<Path<String>>,
     State(state): State<AppState>,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Response, StatusCode> {
     let article_path = article_path.map(|Path(article_path)| article_path);
     let full_name = cookies
         .get("full_name")
@@ -95,7 +95,7 @@ pub async fn article_get(
     if let Some(file_content) = file_content {
         raw_file_content = file_content;
     } else if !edit_mode {
-        return Err(StatusCode::NOT_FOUND);
+        return Ok(Redirect::to("/").into_response());
     }
     ArticleTemplate {
         full_name,
@@ -110,13 +110,17 @@ pub async fn article_get(
             error!("Error rendering template for {current_path}: {e}");
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         },
-        |rendered| Ok(Html(rendered)),
+        |rendered| Ok(Html(rendered).into_response()),
     )
 }
 
 #[derive(Deserialize)]
 pub struct EditForm {
     markdown: String,
+}
+
+pub async fn preview_markdown(Form(form): Form<EditForm>) -> Html<String> {
+    Html(markdown::to_html(&form.markdown))
 }
 
 #[derive(Deserialize)]

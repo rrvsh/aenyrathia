@@ -1,22 +1,36 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/static/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Geo:ital@0;1&display=swap" rel="stylesheet">
+    <link rel="preload" href="/static/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/static/fonts/InterVariable-Italic.woff2" as="font" type="font/woff2" crossorigin>
   </head>
 
-  <body class="nanum-myeongjo-regular">
-    <header class="header">
-    {% block header %}
-    {% endblock %}
-    </header>
-    <div class="content">
-    {% block content %}
-    {% endblock %}
+  <body class="app-shell">
+    <div class="app-shell__inner">
+      <header class="site-header">
+        <div class="site-header__inner">
+          <div class="site-header__brand">
+            <a class="site-header__home" href="/" aria-label="Home">
+              <svg class="site-header__home-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 3 3 10v11h6v-6h6v6h6V10z" />
+              </svg>
+              <span class="sr-only">Home</span>
+            </a>
+          </div>
+          <div class="site-header__actions">
+          {% block header %}
+          {% endblock %}
+          </div>
+        </div>
+      </header>
+      <main class="site-main container">
+      {% block content %}
+      {% endblock %}
+      </main>
     </div>
   </body>
 </html>

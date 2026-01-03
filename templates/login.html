@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <form method="post" action="/login?redirect_to={{ redirect_path }}">
-    <h1>Login</h1>
-    <label>
-      Email
-      <input required name="email" type="email" placeholder="rafiq@rrv.sh" autocomplete="email">
-    </label>
-    <label>
-      Password
-      <input required name="password" type="password" autocomplete="current-password">
-    </label>
-    <button type="submit">Login</button>
-  </form>
+  <div class="auth-layout">
+    <form class="form-card form-grid" method="post" action="/login?redirect_to={{ redirect_path }}">
+      <h1>Login</h1>
+      <label class="form-label">
+        Email
+        <input class="form-control" required name="email" type="email" placeholder="rafiq@rrv.sh" autocomplete="email">
+      </label>
+      <label class="form-label">
+        Password
+        <input class="form-control" required name="password" type="password" autocomplete="current-password">
+      </label>
+      <button class="btn btn--primary" type="submit">Login</button>
+    </form>
+  </div>
 {% endblock %}
