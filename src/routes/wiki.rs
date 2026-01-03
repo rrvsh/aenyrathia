@@ -21,6 +21,7 @@ impl WikiRouter {
     pub fn build(state: AppState) -> Router {
         let handlers = get(article_get).post(article_post);
         Router::new()
+            .route("/preview", post(preview_markdown))
             .route("/edit-mode/toggle", post(toggle_edit_mode))
             .route("/", handlers.clone())
             .route("/{*article_path}", handlers)
@@ -116,6 +117,10 @@ pub async fn article_get(
 #[derive(Deserialize)]
 pub struct EditForm {
     markdown: String,
+}
+
+pub async fn preview_markdown(Form(form): Form<EditForm>) -> Html<String> {
+    Html(markdown::to_html(&form.markdown))
 }
 
 #[derive(Deserialize)]

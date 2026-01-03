@@ -58,6 +58,7 @@
       <div class="article__editor">
       {% if edit_mode %}
         <textarea
+          id="editor"
           class="form-control form-control--textarea form-control--mono"
           name="markdown"
           rows="12"
@@ -78,7 +79,15 @@
       {% endif %}
       </div>
       {% if edit_mode %}
-      <div class="article__preview">
+      <div
+        class="article__preview"
+        id="live_preview"
+        hx-post="/preview"
+        hx-trigger="input from:#editor delay:200ms"
+        hx-target="this"
+        hx-swap="innerHTML"
+        hx-include="#editor"
+      >
         {{ raw_file_content | html | safe }}
       </div>
       {% endif %}
