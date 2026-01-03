@@ -9,6 +9,10 @@
   --color-accent: #7ea6ff;
   --color-accent-strong: #a8c4ff;
   --color-focus-ring: rgba(138, 180, 255, 0.35);
+  --color-success: #2ea043;
+  --color-success-bg: #102418;
+  --color-danger: #f85149;
+  --color-danger-bg: #2a1210;
 
   --space-1: 0.1rem;
   --space-2: 0.2rem;
@@ -247,6 +251,64 @@ textarea {
 
 .form-control--mono {
   font-family: var(--font-mono);
+}
+
+.alert {
+  padding: var(--space-6) var(--space-8);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+}
+
+.alert--info {
+  border-color: var(--color-accent);
+  background: rgba(138, 180, 255, 0.08);
+}
+
+.alert--success {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.alert--error {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: var(--text-sm);
+  min-height: calc(var(--space-9) + var(--space-4));
+}
+
+.status--idle {
+  background: transparent;
+  border-color: transparent;
+}
+
+.status--saving {
+  border-color: var(--color-accent);
+  background: rgba(138, 180, 255, 0.08);
+}
+
+.status--success {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.status--error {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.article__status {
+  margin-top: var(--space-4);
 }
 
 h1,

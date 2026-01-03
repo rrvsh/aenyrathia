@@ -56,10 +56,14 @@
           hx-post="{{ current_path }}"
           hx-swap="none"
           hx-trigger="input delay:500ms"
-          oninput="document.getElementById('edit_status').innerHTML = 'Saving...'"
-          hx-on::after-request="document.getElementById('edit_status').innerHTML = 'Saved!'"
+          hx-on::before-request="setEditStatus('saving')"
+          hx-on::after-request="setEditStatus(event.detail.successful === false ? 'error' : 'success')"
+          hx-on::response-error="setEditStatus('error')"
+          hx-on::send-error="setEditStatus('error')"
         >{{ raw_file_content }}</textarea>
-        <span id="edit_status"></span>
+        <div class="article__status">
+          <span id="edit_status" class="status status--idle" aria-live="polite"></span>
+        </div>
       {% else %}
         {{ raw_file_content | html | safe }}
       {% endif %}
@@ -72,6 +76,35 @@
     </div>
   </div>
   <script>
+    const statusEl = document.getElementById("edit_status");
+
+    function setEditStatus(state) {
+      if (!statusEl) return;
+      const base = ["status"];
+      let message = "";
+      switch (state) {
+        case "saving":
+          base.push("status--saving");
+          message = "Saving...";
+          break;
+        case "success":
+          base.push("status--success");
+          message = "Saved";
+          break;
+        case "error":
+          base.push("status--error");
+          message = "Save failed";
+          break;
+        default:
+          base.push("status--idle");
+          message = "Ready";
+      }
+      statusEl.className = base.join(" ");
+      statusEl.textContent = message;
+    }
+
+    setEditStatus("idle");
+
     function goToNewPath(e) {
       e.preventDefault();
       const path = document.getElementById("new_path").value.trim();
