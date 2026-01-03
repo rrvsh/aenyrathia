@@ -4,17 +4,12 @@ use git2::{
 };
 use log::{trace, warn};
 use std::env;
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use tempfile::{TempDir, tempdir};
-
-/// Returns true if a file can be written because it already exists or its parent directory exists.
-fn path_editable<P: AsRef<Path>>(path: P) -> bool {
-    let path = path.as_ref();
-    path.is_file() || path.parent().is_some_and(std::path::Path::is_dir)
-}
 
 /// Author information for a commit.
 pub struct Author {
@@ -172,10 +167,12 @@ impl GitRemote {
 
         let workdir = repo.workdir().ok_or(())?;
         let target_path = workdir.join(relative_path);
-        if !path_editable(&target_path) {
-            return Err(());
+        if let Some(parent) = target_path.parent() {
+            fs::create_dir_all(parent).map_err(|_| {
+                trace!("error creating dir");
+            })?;
         }
-        std::fs::write(&target_path, content).map_err(|_| ())?;
+        fs::write(&target_path, content).map_err(|_| ())?;
         trace!(
             "Wrote {content} to file at path {} for branch refs/heads/{branch_name}.",
             target_path.display()

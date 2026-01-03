@@ -10,7 +10,7 @@ use axum::http::StatusCode;
 use axum::response::Html;
 use axum::response::Redirect;
 use axum::routing::{get, post};
-use log::error;
+use log::{error, trace};
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -148,9 +148,13 @@ pub async fn article_post(
     cookies: Cookies,
     Form(form): Form<EditForm>,
 ) -> StatusCode {
-    let article_path = article_path.map(|Path(article_path)| article_path);
+    let article_path = article_path.map(|Path(article_path)| {
+        trace!("article path: {article_path}");
+        article_path
+    });
     if let Some(full_name) = cookies.get("full_name") {
         let relative_path = resolve_article_path(article_path);
+        trace!("file path: {relative_path}");
         let branch_name = resolve_branch_name(Some(true), Some(&full_name.value().to_string()));
         let content = normalise_newlines(&form.markdown);
         let author = cookies.get("email").map(|email| Author {
