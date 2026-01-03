@@ -9,14 +9,16 @@
     <link rel="preload" href="/static/fonts/InterVariable-Italic.woff2" as="font" type="font/woff2" crossorigin>
   </head>
 
-  <body>
-    <header class="header">
-    {% block header %}
-    {% endblock %}
-    </header>
-    <div class="content">
-    {% block content %}
-    {% endblock %}
+  <body class="app-shell">
+    <div class="app-shell__inner">
+      <header class="site-header container">
+      {% block header %}
+      {% endblock %}
+      </header>
+      <main class="site-main container">
+      {% block content %}
+      {% endblock %}
+      </main>
     </div>
   </body>
 </html>
