@@ -56,6 +56,7 @@ Source: https://google.github.io/eng-practices/review/developer/small-cls.html
 - 2026-01-03: Task 7 (Responsive refinements) completed—sidebar toggle for mobile, tightened gaps, and mobile textarea caps while columns stack under 900px; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 - 2026-01-03: Task 8 (Docs & cleanup) completed—documented style system, removed unused Nanum helper, and verified classes align; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 - 2026-01-03: Added global 404 fallback redirect to index page; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
+- 2026-01-03: Article 404 redirect—non-existent files in view mode now redirect to index instead of 404; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 
 ## Network requests (deferred)
 - None pending.  
