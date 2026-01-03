@@ -11,9 +11,21 @@
 
   <body class="app-shell">
     <div class="app-shell__inner">
-      <header class="site-header container">
-      {% block header %}
-      {% endblock %}
+      <header class="site-header">
+        <div class="site-header__inner">
+          <div class="site-header__brand">
+            <a class="site-header__home" href="/" aria-label="Home">
+              <svg class="site-header__home-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M12 3 3 10v11h6v-6h6v6h6V10z" />
+              </svg>
+              <span class="sr-only">Home</span>
+            </a>
+          </div>
+          <div class="site-header__actions">
+          {% block header %}
+          {% endblock %}
+          </div>
+        </div>
       </header>
       <main class="site-main container">
       {% block content %}

@@ -58,6 +58,11 @@ Source: https://google.github.io/eng-practices/review/developer/small-cls.html
 - 2026-01-03: Added global 404 fallback redirect to index page; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 - 2026-01-03: Article 404 redirect—non-existent files in view mode now redirect to index instead of 404; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 - 2026-01-03: Live preview—added /preview endpoint and htmx wiring so article preview updates as you type; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
+- 2026-01-03: Centered auth forms with an `auth-layout` flex wrapper so login/register cards are viewport-centered; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
+- 2026-01-03: Restyled site header with brand anchor, padded card treatment, and aligned auth/edit controls to match app design; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
+- 2026-01-03: Extended header full-width with inner container padding for edge-to-edge background while keeping content aligned; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
+- 2026-01-03: Swapped brand text for a home icon (with sr-only label) and kept actions right-aligned; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
+- 2026-01-03: Adjusted header flex so home icon stays left and all auth/edit buttons align right (reddit-style), now using full-width inner bar; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 
 ## Network requests (deferred)
 - None pending.  

@@ -4,7 +4,7 @@
   {% match full_name %}
     {% when Some with (val) %}
     <div class="header-actions">
-      <span>signed in as: {{ val }}</span>
+      <span class="header-identity">Signed in as {{ val }}</span>
       <form class="header-actions__form" method="post" action="/logout?redirect_to={{ current_path }}">
         <button class="btn btn--ghost btn--small" type="submit">Logout</button>
       </form>
@@ -19,9 +19,9 @@
       </button>
     </form>
     {% when None %}
-    <div>
-      <a href="/login?redirect_to={{ current_path }}">Login</a>
-      <a href="/register?redirect_to={{ current_path }}">Register</a>
+    <div class="header-auth">
+      <a class="header-link" href="/login?redirect_to={{ current_path }}">Login</a>
+      <a class="header-link header-link--primary" href="/register?redirect_to={{ current_path }}">Register</a>
     </div>
   {% endmatch %}
 {% endblock %}
