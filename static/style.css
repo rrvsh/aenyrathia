@@ -40,6 +40,31 @@ a:hover {
   letter-spacing: 0.02em;
 }
 
+.new-file {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.new-file input,
+.new-file textarea {
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid #1f2937;
+  background: #0b1220;
+  color: #e6edf3;
+}
+
+.new-file button {
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #1f2937;
+  background: #1f2937;
+  color: #e6edf3;
+  cursor: pointer;
+}
+
 .file-tree {
   list-style: none;
   padding-left: 0;

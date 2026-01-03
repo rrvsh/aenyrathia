@@ -26,6 +26,18 @@
   <aside class="sidebar">
     <div class="sidebar__header">Files</div>
     {{ file_tree_html | safe }}
+    {% if edit_mode %}
+    <form class="new-file" onsubmit="goToNewPath(event)">
+      <label for="new_path">New file path</label>
+      <input
+        id="new_path"
+        type="text"
+        placeholder="folder/page-name"
+        required
+      />
+      <button type="submit">Create & edit</button>
+    </form>
+    {% endif %}
   </aside>
   <div class="article__editor">
   {% if edit_mode %}
@@ -51,4 +63,13 @@
   {% else %}
   <div></div>
   {% endif %}
+  <script>
+    function goToNewPath(e) {
+      e.preventDefault();
+      const path = document.getElementById("new_path").value.trim();
+      if (path) {
+        window.location.href = "/" + path.replace(/^\/+/, "");
+      }
+    }
+  </script>
 {% endblock %}
