@@ -51,6 +51,7 @@ Source: https://google.github.io/eng-practices/review/developer/small-cls.html
 - 2026-01-03: Task 2 (Typography & font loading) completed—self-hosted Inter with preload/meta viewport, heading/body typography utilities wired; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 - 2026-01-03: Task 3 (Layout primitives) completed—added container/grid primitives, updated base/article layouts with responsive sidebar/content grids; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 - 2026-01-03: Task 4 (Form & control components) completed—button/input/textarea system with focus styles applied to auth forms, sidebar creation, and article editor; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
+- 2026-01-03: Task 5 (File tree polish) completed—added caret icons, hover/focus/active states, and nested indentation for the file tree; `cargo test` and `cargo clippy --all-targets --all-features -- -D warnings` passing.  
 
 ## Network requests (deferred)
 - None pending.  
