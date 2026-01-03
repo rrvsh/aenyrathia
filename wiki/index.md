@@ -8,12 +8,11 @@ To edit an existing page, open it and start typing in the editor; your changes a
 
 If you want to add a new page, use the “New file path” field (for example, enter `characters/arma`), submit it, and then write your content in the editor that appears.
 
-> [!NOTE]
-> The file will not be created until you add something to the editor.
+Note: The file will not be created until you add something to the editor.
 
 ## Formatting Examples
 
-- Headings
+### Headings
 
 Raw:
 
@@ -28,7 +27,9 @@ Rendered:
 ## Title Two
 ### Title Three
 
-- Bold and italic
+---
+
+### Bold and italic
 
 Raw:
 
@@ -39,7 +40,9 @@ Rendered:
 
 This is **bold** text and this is *italic* text.
 
-- Lists
+---
+
+### Lists
 
 Raw:
 ```markdown
@@ -58,7 +61,9 @@ Rendered:
 1. Numbered item
 2. Another numbered item
 
-- Links to other pages
+---
+
+### Links to other pages
 
 Raw:
 ```markdown
