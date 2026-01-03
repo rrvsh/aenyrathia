@@ -1,3 +1,3 @@
 exjkjkj
 
-[link](
+[link](/session-1)
