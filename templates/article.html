@@ -3,14 +3,14 @@
 {% block header %}
   {% match full_name %}
     {% when Some with (val) %}
-    <div>
-      <span>signed in as: {{ val }}</span>
-      <form method="post" action="/logout?redirect_to={{ current_path }}">
-        <button type="submit">Logout</button>
+    <div class="header-actions">
+      <span class="header-identity">Signed in as {{ val }}</span>
+      <form class="header-actions__form" method="post" action="/logout?redirect_to={{ current_path }}">
+        <button class="btn btn--ghost btn--small" type="submit">Logout</button>
       </form>
     </div>
-    <form method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
-      <button type="submit">
+    <form class="header-actions__form" method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
+      <button class="btn btn--ghost btn--small" type="submit">
         {% if edit_mode %}
         Switch to public view
         {% else %}
@@ -19,55 +19,123 @@
       </button>
     </form>
     {% when None %}
-    <div>
-      <a href="/login?redirect_to={{ current_path }}">Login</a>
-      <a href="/register?redirect_to={{ current_path }}">Register</a>
+    <div class="header-auth">
+      <a class="header-link" href="/login?redirect_to={{ current_path }}">Login</a>
+      <a class="header-link header-link--primary" href="/register?redirect_to={{ current_path }}">Register</a>
     </div>
   {% endmatch %}
 {% endblock %}
 
 {% block content %}
-  <aside class="sidebar">
-    <div class="sidebar__header">Files</div>
-    {{ file_tree_html | safe }}
-    {% if edit_mode %}
-    <form class="new-file" onsubmit="goToNewPath(event)">
-      <label for="new_path">New file path</label>
-      <input
-        id="new_path"
-        type="text"
-        placeholder="folder/page-name"
-        required
-      />
-      <button type="submit">Create & edit</button>
-    </form>
-    {% endif %}
-  </aside>
-  <div class="article__editor">
-  {% if edit_mode %}
-    <textarea
-      name="markdown"
-      rows="12"
-      cols="80"
-      hx-post="{{ current_path }}"
-      hx-swap="none"
-      hx-trigger="input delay:500ms"
-      oninput="document.getElementById('edit_status').innerHTML = 'Saving...'"
-      hx-on::after-request="document.getElementById('edit_status').innerHTML = 'Saved!'"
-    >{{ raw_file_content }}</textarea>
-    <span id="edit_status"></span>
-  {% else %}
-    {{ raw_file_content | html | safe }}
-  {% endif %}
+  <button
+    class="sidebar-toggle btn btn--ghost btn--small"
+    type="button"
+    id="sidebar_toggle"
+    aria-controls="sidebar"
+    aria-expanded="false"
+  >
+    Toggle files
+  </button>
+  <div class="page-grid">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__header">Files</div>
+      {{ file_tree_html | safe }}
+      {% if edit_mode %}
+      <form class="new-file form-grid" onsubmit="goToNewPath(event)">
+        <label class="form-label" for="new_path">New file path</label>
+        <input
+          class="form-control"
+          id="new_path"
+          type="text"
+          placeholder="folder/page-name"
+          required
+        />
+        <button class="btn btn--primary" type="submit">Create & edit</button>
+      </form>
+      {% endif %}
+    </aside>
+    <div class="article {% if !edit_mode %}article--single{% endif %}">
+      <div class="article__editor">
+      {% if edit_mode %}
+        <textarea
+          id="editor"
+          class="form-control form-control--textarea form-control--mono"
+          name="markdown"
+          rows="12"
+          cols="80"
+          hx-post="{{ current_path }}"
+          hx-swap="none"
+          hx-trigger="input delay:500ms"
+          hx-on::before-request="setEditStatus('saving')"
+          hx-on::after-request="setEditStatus(event.detail.successful === false ? 'error' : 'success')"
+          hx-on::response-error="setEditStatus('error')"
+          hx-on::send-error="setEditStatus('error')"
+        >{{ raw_file_content }}</textarea>
+        <div class="article__status">
+          <span id="edit_status" class="status status--idle" aria-live="polite"></span>
+        </div>
+      {% else %}
+        {{ raw_file_content | html | safe }}
+      {% endif %}
+      </div>
+      {% if edit_mode %}
+      <div
+        class="article__preview"
+        id="live_preview"
+        hx-post="/preview"
+        hx-trigger="input from:#editor delay:200ms"
+        hx-target="this"
+        hx-swap="innerHTML"
+        hx-include="#editor"
+      >
+        {{ raw_file_content | html | safe }}
+      </div>
+      {% endif %}
+    </div>
   </div>
-  {% if edit_mode %}
-  <div class="article__preview">
-    {{ raw_file_content | html | safe }}
-  </div>
-  {% else %}
-  <div></div>
-  {% endif %}
   <script>
+    const statusEl = document.getElementById("edit_status");
+
+    function setEditStatus(state) {
+      if (!statusEl) return;
+      const base = ["status"];
+      let message = "";
+      switch (state) {
+        case "saving":
+          base.push("status--saving");
+          message = "Saving...";
+          break;
+        case "success":
+          base.push("status--success");
+          message = "Saved";
+          break;
+        case "error":
+          base.push("status--error");
+          message = "Save failed";
+          break;
+        default:
+          base.push("status--idle");
+          message = "Ready";
+      }
+      statusEl.className = base.join(" ");
+      statusEl.textContent = message;
+    }
+
+    setEditStatus("idle");
+
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebar_toggle");
+
+    function toggleSidebar() {
+      if (!sidebar || !sidebarToggle) return;
+      const isOpen = sidebar.classList.toggle("sidebar--open");
+      sidebarToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener("click", toggleSidebar);
+    }
+
     function goToNewPath(e) {
       e.preventDefault();
       const path = document.getElementById("new_path").value.trim();

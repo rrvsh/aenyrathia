@@ -1,21 +1,23 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <form method="post" action="/register?redirect_to={{ redirect_path }}">
-    <h1>Register</h1>
-    <p>Note: Your full name and email will be used to author your changes.</p>
-    <label>
-      Full Name
-      <input required name="fullname" placeholder="Mohammad Rafiq" autocomplete="name">
-    </label>
-    <label>
-      Email
-      <input required name="email" type="email" placeholder="rafiq@rrv.sh" autocomplete="email">
-    </label>
-    <label>
-      Password
-      <input required name="password" type="password" autocomplete="new-password">
-    </label>
-    <button type="submit">Register</button>
-  </form>
+  <div class="auth-layout">
+    <form class="form-card form-grid" method="post" action="/register?redirect_to={{ redirect_path }}">
+      <h1>Register</h1>
+      <p class="form-help">Note: Your full name and email will be used to author your changes.</p>
+      <label class="form-label">
+        Full Name
+        <input class="form-control" required name="fullname" placeholder="Mohammad Rafiq" autocomplete="name">
+      </label>
+      <label class="form-label">
+        Email
+        <input class="form-control" required name="email" type="email" placeholder="rafiq@rrv.sh" autocomplete="email">
+      </label>
+      <label class="form-label">
+        Password
+        <input class="form-control" required name="password" type="password" autocomplete="new-password">
+      </label>
+      <button class="btn btn--primary" type="submit">Register</button>
+    </form>
+  </div>
 {% endblock %}
