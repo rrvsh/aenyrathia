@@ -11,7 +11,11 @@
     </div>
     <form method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
       <button type="submit">
-        Toggle edit mode
+        {% if edit_mode %}
+        Switch to public view
+        {% else %}
+        Switch to edit view
+        {% endif %}
       </button>
     </form>
     {% when None %}
@@ -23,27 +27,53 @@
 {% endblock %}
 
 {% block content %}
+  <aside class="sidebar">
+    <div class="sidebar__header">Files</div>
+    {{ file_tree_html | safe }}
+    {% if edit_mode %}
+    <form class="new-file" onsubmit="goToNewPath(event)">
+      <label for="new_path">New file path</label>
+      <input
+        id="new_path"
+        type="text"
+        placeholder="folder/page-name"
+        required
+      />
+      <button type="submit">Create & edit</button>
+    </form>
+    {% endif %}
+  </aside>
+  <div class="article__editor">
+  {% if edit_mode %}
+    <textarea
+      name="markdown"
+      rows="12"
+      cols="80"
+      hx-post="{{ current_path }}"
+      hx-swap="none"
+      hx-trigger="input delay:500ms"
+      oninput="document.getElementById('edit_status').innerHTML = 'Saving...'"
+      hx-on::after-request="document.getElementById('edit_status').innerHTML = 'Saved!'"
+    >{{ raw_file_content }}</textarea>
+    <span id="edit_status"></span>
+  {% else %}
+    {{ raw_file_content | html | safe }}
+  {% endif %}
+  </div>
+  {% if edit_mode %}
+  <div class="article__preview">
+    {{ raw_file_content | html | safe }}
+  </div>
+  {% else %}
   <div></div>
-  <div>
-    {% if edit_mode %}
-      <textarea
-        name="markdown"
-        rows="12"
-        cols="80"
-        hx-post=""
-        hx-swap="none"
-        hx-trigger="input delay:500ms"
-        oninput="document.getElementById('edit_status').innerHTML = 'Saving...'"
-        hx-on::after-request="document.getElementById('edit_status').innerHTML = 'Saved!'"
-      >{{ raw_file_content }}</textarea>
-      <span id="edit_status"></span>
-    {% else %}
-      {{ raw_file_content | html | safe }}
-    {% endif %}
-  </div>
-  <div>
-    {% if edit_mode %}
-      {{ raw_file_content | html | safe }}
-    {% endif %}
-  </div>
+  {% endif %}
+  <script>
+    function goToNewPath(e) {
+      e.preventDefault();
+      const path = document.getElementById("new_path").value.trim();
+      if (path) {
+        window.location.href = "/" + path.replace(/^\/+/, "");
+      }
+    }
+  </script>
 {% endblock %}
