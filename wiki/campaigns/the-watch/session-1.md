@@ -8,8 +8,6 @@ This episode was played at Rafiq and Haikal's apartment, and included the follow
 - Toph, playing [Mayari Atum](/characters/mayari-atum)
 - Buzz, playing [Jonathan Clearwater](/characters/jonathan-clearwater)
 
-### TL;DR
-
 This episode concluded in The Watch being formed after Sahm, Mayari, and Jon, in their superhero identities, repelled an incursion that happened at Governor Ortlinde's mayoral rally without any casualties.
 
 This was aided by Xen Myers posting an article with an "exclusive interview" with the three, in truth a calculated plan to get ahead of the Awakened chasing the heroes down for vigilanteeism by painting them as heroes of Ilrinia, and throwing their support behind Gov. Ortlinde's campaign.
