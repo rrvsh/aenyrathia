@@ -8,7 +8,7 @@ This episode was played at Rafiq and Haikal's apartment, and included the follow
 - Toph, playing [Mayari Atum](/characters/mayari-atum)
 - Buzz, playing [Jonathan Clearwater](/characters/jonathan-clearwater)
 
-This episode concluded in The Watch being formed after Sahm, Mayari, and Jon repelled an incursion that happened at Governor Ortlinde's mayoral rally. This incursion was the largest yet recorded in Ilrinia, but due to Aero, the Beacon, and the Swan showing up, the demon 
+This episode concluded in The Watch being formed after Sahm, Mayari, and Jon repelled an incursion that happened at Governor Ortlinde's mayoral rally. This incursion was the largest yet recorded in Ilrinia, but due to Aero, the Beacon, and the Swan showing up, the demon that came out of it was slain with no civilian casualties.
 
 This was aided by Xen Myers posting an article with an "exclusive interview" with the three, in truth a calculated plan to get ahead of the Awakened chasing the heroes down for vigilanteeism by painting them as heroes of Ilrinia, and throwing their support behind Gov. Ortlinde's campaign.
 
