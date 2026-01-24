@@ -1,5 +1,6 @@
 use app::{settings, state};
 use axum::http::StatusCode;
+use axum::response::Redirect;
 use axum::{Extension, Router, ServiceExt};
 use log::info;
 use routes::auth::AuthRouter;
@@ -10,7 +11,6 @@ use tower_cookies::CookieManagerLayer;
 use tower_http::normalize_path::NormalizePath;
 use tower_http::services::ServeDir;
 use tower_http::timeout::TimeoutLayer;
-use axum::response::Redirect;
 
 mod app;
 mod filters;

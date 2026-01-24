@@ -3,11 +3,11 @@ use crate::filters;
 use crate::formatting::{normalise_newlines, resolve_article_path, resolve_branch_name};
 use crate::git::Author;
 use askama::Template;
-use axum::response::{Html, Redirect, Response, IntoResponse};
 use axum::Router;
 use axum::extract::Form;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use log::{error, trace};
 use serde::Deserialize;
@@ -36,6 +36,7 @@ struct ArticleTemplate {
     edit_mode: bool,
     raw_file_content: String,
     current_path: String,
+    prefix_path: String,
     file_tree_html: String,
 }
 
@@ -65,43 +66,66 @@ pub async fn article_get(
     let full_name = cookies
         .get("full_name")
         .map(|cookie| cookie.value().to_string());
-    let current_path = String::from("/") + &article_path.clone().unwrap_or_default();
+    let (branch_prefix, article_path) = parse_branch_prefix(article_path.as_deref(), |branch| {
+        state.remote.branch_exists(branch)
+    });
+    let has_prefix = branch_prefix.is_some();
     let relative_path = resolve_article_path(article_path.clone());
-    let edit_mode = if full_name.is_none() {
-        false
-    } else {
-        cookies
-            .get("edit_mode")
-            .and_then(|cookie| match cookie.value() {
-                "true" => Some(true),
-                "false" => Some(false),
-                _ => None,
-            })
-            .unwrap_or(false)
+    let prefix_path = branch_prefix
+        .as_deref()
+        .map(|prefix| format!("/{prefix}"))
+        .unwrap_or_default();
+    let current_path = match (branch_prefix.as_deref(), article_path.as_deref()) {
+        (Some(prefix), Some(path)) if !path.is_empty() => format!("/{prefix}/{path}"),
+        (Some(prefix), _) => format!("/{prefix}"),
+        (None, Some(path)) if !path.is_empty() => format!("/{path}"),
+        _ => "/".to_string(),
     };
-    let branch_name = resolve_branch_name(Some(edit_mode), full_name.as_ref());
+    let edit_cookie = cookies
+        .get("edit_mode")
+        .and_then(|cookie| match cookie.value() {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        })
+        .unwrap_or(false);
+    let edit_mode = resolve_edit_mode(has_prefix, full_name.as_deref(), edit_cookie);
+    let branch_name = if let Some(prefix) = branch_prefix.as_ref() {
+        format!("user/{prefix}")
+    } else {
+        resolve_branch_name(Some(edit_mode), full_name.as_ref())
+    };
     let current_slug = article_path
+        .as_deref()
         .filter(|path| !path.is_empty())
-        .unwrap_or_else(|| "index".to_string());
+        .unwrap_or("index")
+        .to_string();
 
     let file_content = state.remote.read_file(&relative_path, Some(&branch_name));
     let file_tree_paths = state
         .remote
         .list_markdown_paths("wiki", Some(&branch_name))
         .unwrap_or_default();
-    let file_tree = build_file_tree(&file_tree_paths, &current_slug);
+    let file_tree = build_file_tree(&file_tree_paths, &current_slug, &prefix_path);
     let file_tree_html = render_file_tree_html(&file_tree);
     let mut raw_file_content = String::new();
     if let Some(file_content) = file_content {
         raw_file_content = file_content;
-    } else if !edit_mode {
-        return Ok(Redirect::to("/").into_response());
+    } else {
+        match missing_file_response(has_prefix, edit_mode) {
+            Ok(()) => {}
+            Err(StatusCode::TEMPORARY_REDIRECT) => {
+                return Ok(Redirect::to("/").into_response());
+            }
+            Err(status) => return Err(status),
+        }
     }
     ArticleTemplate {
         full_name,
         edit_mode,
         raw_file_content,
         current_path: current_path.clone(),
+        prefix_path,
         file_tree_html,
     }
     .render()
@@ -156,6 +180,12 @@ pub async fn article_post(
         trace!("article path: {article_path}");
         article_path
     });
+    let (branch_prefix, article_path) = parse_branch_prefix(article_path.as_deref(), |branch| {
+        state.remote.branch_exists(branch)
+    });
+    if branch_prefix.is_some() {
+        return StatusCode::FORBIDDEN;
+    }
     if let Some(full_name) = cookies.get("full_name") {
         let relative_path = resolve_article_path(article_path);
         trace!("file path: {relative_path}");
@@ -179,7 +209,7 @@ pub async fn article_post(
     }
 }
 
-fn build_file_tree(paths: &[String], current_slug: &str) -> Vec<FileTreeNode> {
+fn build_file_tree(paths: &[String], current_slug: &str, base_href: &str) -> Vec<FileTreeNode> {
     let mut root = TreeBuilderNode::default();
 
     for path in paths {
@@ -190,7 +220,7 @@ fn build_file_tree(paths: &[String], current_slug: &str) -> Vec<FileTreeNode> {
 
         let is_current = slug_path == current_slug;
         let segments: Vec<&str> = slug_path.split('/').collect();
-        insert_path(&mut root, &segments, slug_path, is_current);
+        insert_path(&mut root, &segments, slug_path, is_current, base_href);
     }
 
     let mut nodes = Vec::new();
@@ -202,18 +232,32 @@ fn build_file_tree(paths: &[String], current_slug: &str) -> Vec<FileTreeNode> {
     nodes
 }
 
-fn insert_path(parent: &mut TreeBuilderNode, segments: &[&str], slug_path: &str, is_current: bool) {
+fn insert_path(
+    parent: &mut TreeBuilderNode,
+    segments: &[&str],
+    slug_path: &str,
+    is_current: bool,
+    base_href: &str,
+) {
     if let Some((head, tail)) = segments.split_first() {
         let child = parent.children.entry((*head).to_string()).or_default();
         if tail.is_empty() {
-            child.href = Some(if slug_path == "index" {
+            let trimmed_base = base_href.trim_end_matches('/');
+            let target_path = if slug_path == "index" {
+                trimmed_base.to_string()
+            } else if trimmed_base.is_empty() {
+                format!("/{slug_path}")
+            } else {
+                format!("{trimmed_base}/{slug_path}")
+            };
+            child.href = Some(if target_path.is_empty() {
                 "/".to_string()
             } else {
-                format!("/{slug_path}")
+                target_path
             });
             child.is_current = is_current;
         } else {
-            insert_path(child, tail, slug_path, is_current);
+            insert_path(child, tail, slug_path, is_current, base_href);
         }
     }
 }
@@ -304,4 +348,119 @@ fn escape_html(input: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&#39;")
+}
+
+fn parse_branch_prefix(
+    path: Option<&str>,
+    branch_exists: impl Fn(&str) -> bool,
+) -> (Option<String>, Option<String>) {
+    let Some(path) = path.filter(|path| !path.is_empty()) else {
+        return (None, None);
+    };
+    let mut segments = path.splitn(2, '/');
+    let candidate = segments.next().unwrap_or_default();
+    let remainder = segments.next().unwrap_or_default();
+    let branch_name = format!("user/{candidate}");
+    if branch_exists(&branch_name) {
+        let remainder = remainder.to_string();
+        let remainder = if remainder.is_empty() {
+            None
+        } else {
+            Some(remainder)
+        };
+        (Some(candidate.to_string()), remainder)
+    } else {
+        (None, Some(path.to_string()))
+    }
+}
+
+fn resolve_edit_mode(has_prefix: bool, full_name: Option<&str>, edit_cookie: bool) -> bool {
+    if has_prefix || full_name.is_none() {
+        false
+    } else {
+        edit_cookie
+    }
+}
+
+fn missing_file_response(has_prefix: bool, edit_mode: bool) -> Result<(), StatusCode> {
+    if has_prefix {
+        Err(StatusCode::NOT_FOUND)
+    } else if !edit_mode {
+        Err(StatusCode::TEMPORARY_REDIRECT)
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        build_file_tree, missing_file_response, parse_branch_prefix, render_file_tree_html,
+        resolve_edit_mode,
+    };
+    use axum::http::StatusCode;
+
+    #[test]
+    fn parse_branch_prefix_resolves_known_branch() {
+        let (prefix, rest) = parse_branch_prefix(Some("mohammad-rafiq/campaigns"), |branch| {
+            branch == "user/mohammad-rafiq"
+        });
+        assert_eq!(prefix.as_deref(), Some("mohammad-rafiq"));
+        assert_eq!(rest.as_deref(), Some("campaigns"));
+    }
+
+    #[test]
+    fn parse_branch_prefix_falls_back_when_missing() {
+        let (prefix, rest) = parse_branch_prefix(Some("docs/getting-started"), |_| false);
+        assert!(prefix.is_none());
+        assert_eq!(rest.as_deref(), Some("docs/getting-started"));
+    }
+
+    #[test]
+    fn parse_branch_prefix_handles_empty_path() {
+        let (prefix, rest) = parse_branch_prefix(None, |_| true);
+        assert!(prefix.is_none());
+        assert!(rest.is_none());
+    }
+
+    #[test]
+    fn edit_mode_disabled_when_prefix_present() {
+        assert!(!resolve_edit_mode(true, Some("User"), true));
+    }
+
+    #[test]
+    fn edit_mode_enabled_for_logged_in_user_without_prefix() {
+        assert!(resolve_edit_mode(false, Some("User"), true));
+    }
+
+    #[test]
+    fn edit_mode_disabled_for_anonymous_user() {
+        assert!(!resolve_edit_mode(false, None, true));
+    }
+
+    #[test]
+    fn missing_file_with_prefix_returns_404() {
+        let result = missing_file_response(true, false);
+        assert_eq!(result, Err(StatusCode::NOT_FOUND));
+    }
+
+    #[test]
+    fn missing_file_without_prefix_redirects_when_not_editing() {
+        let result = missing_file_response(false, false);
+        assert_eq!(result, Err(StatusCode::TEMPORARY_REDIRECT));
+    }
+
+    #[test]
+    fn missing_file_without_prefix_allows_edit_mode() {
+        let result = missing_file_response(false, true);
+        assert_eq!(result, Ok(()));
+    }
+
+    #[test]
+    fn file_tree_links_include_prefix() {
+        let paths = vec!["notes/todo.md".to_string()];
+        let tree = build_file_tree(&paths, "notes/todo", "/mohammad-rafiq");
+        let html = render_file_tree_html(&tree);
+        assert!(html.contains("/mohammad-rafiq/notes/todo"));
+    }
 }
