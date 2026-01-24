@@ -1,3 +1,3 @@
 # Jonathan Clearwater
 
-Jon is a recent graduate from Miskatonic University, and the son of tech magnate Victor Clearwater. He has recently developed the ability to decompose objects into raw magicka and recompose them into any object he can fathom, after being present at the Incident.
+Jon is a recent graduate from Miskatonic University, and the son of tech magnate Victor Clearwater. He has recently developed the ability to decompose objects into raw magicka and recompose them into any object he can fathom, after being present at the Incident alongside Senzorin Talos. 
