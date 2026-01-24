@@ -4,7 +4,7 @@
 
 This episode was played at Rafiq and Haikal's apartment, and included the following players:
 
-- Haikal, playing [Thruggsahmigul](https://aenyrathia.wiki/characters/thruggsahmigul)
+- Haikal, playing [Thruggsahmigul](/characters/thruggsahmigul)
 - Toph, playing [Mayari Atum](/characters/mayari-atum)
 - Buzz, playing [Jonathan Clearwater](/characters/jonathan-clearwater)
 
