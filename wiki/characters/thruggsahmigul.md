@@ -1,3 +1,3 @@
 # Thruggsahmigul
 
-Thruggsahmigul, or Sahm for short, is a young orc man living in Ilrinia
+Thruggsahmigul, or Sahm for short, is a young orc man living in Ilrinia after an incursion 
