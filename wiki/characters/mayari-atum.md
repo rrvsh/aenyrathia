@@ -1,3 +1,3 @@
 # Mayari Atum
 
-Mayari is a young human woman living in Ilrinia
+Mayari is a young human woman born and raised in Ilrinia as part of the 
