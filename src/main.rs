@@ -27,11 +27,11 @@ async fn main() {
     let mut builder = env_logger::Builder::from_env(env);
     builder.init();
 
-    let db = PgPoolOptions::new()
+    let db = match PgPoolOptions::new()
         .max_connections(20)
         .connect_with(settings.db_options.clone())
-        .await;
-    let db = match db {
+        .await
+    {
         Ok(db) => match sqlx::migrate!().run(&db).await {
             Ok(()) => Some(db),
             Err(err) => {
