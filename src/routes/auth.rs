@@ -37,7 +37,14 @@ pub struct RedirectQuery {
     redirect_to: Option<String>,
 }
 
-pub async fn register_get(Query(params): Query<RedirectQuery>) -> Result<Html<String>, StatusCode> {
+pub async fn register_get(
+    Extension(db): Extension<Option<PgPool>>,
+    Query(params): Query<RedirectQuery>,
+) -> Result<Html<String>, StatusCode> {
+    if db.is_none() {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+
     let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
 
     RegisterTemplate { redirect_path }.render().map_or_else(
@@ -57,10 +64,12 @@ pub struct RegisterForm {
 }
 
 pub async fn register_post(
-    db: Extension<PgPool>,
+    Extension(db): Extension<Option<PgPool>>,
     Query(params): Query<RedirectQuery>,
     Form(form): Form<RegisterForm>,
 ) -> Result<Redirect, StatusCode> {
+    let db = db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
     let RegisterForm {
         fullname,
         email,
@@ -78,7 +87,7 @@ pub async fn register_post(
         email,
         password_hash.to_string(),
     )
-    .execute(&*db)
+    .execute(db)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -93,7 +102,14 @@ struct LoginTemplate {
     redirect_path: String,
 }
 
-pub async fn login_get(Query(params): Query<RedirectQuery>) -> Result<Html<String>, StatusCode> {
+pub async fn login_get(
+    Extension(db): Extension<Option<PgPool>>,
+    Query(params): Query<RedirectQuery>,
+) -> Result<Html<String>, StatusCode> {
+    if db.is_none() {
+        return Err(StatusCode::SERVICE_UNAVAILABLE);
+    }
+
     let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
 
     LoginTemplate { redirect_path }.render().map_or_else(
@@ -112,18 +128,20 @@ pub struct LoginForm {
 }
 
 pub async fn login_post(
-    db: Extension<PgPool>,
+    Extension(db): Extension<Option<PgPool>>,
     cookies: Cookies,
     Query(params): Query<RedirectQuery>,
     Form(form): Form<LoginForm>,
 ) -> Result<Redirect, StatusCode> {
+    let db = db.as_ref().ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
     let LoginForm { email, password } = form;
 
     let result = sqlx::query!(
         "select full_name, password_hash from user_data where email=$1",
         email
     )
-    .fetch_one(&*db)
+    .fetch_one(db)
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let parsed_hash =

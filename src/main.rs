@@ -1,7 +1,8 @@
 use app::{settings, state};
 use axum::http::StatusCode;
+use axum::response::Redirect;
 use axum::{Extension, Router, ServiceExt};
-use log::info;
+use log::{error, info, warn};
 use routes::auth::AuthRouter;
 use routes::wiki::WikiRouter;
 use sqlx::postgres::PgPoolOptions;
@@ -10,7 +11,6 @@ use tower_cookies::CookieManagerLayer;
 use tower_http::normalize_path::NormalizePath;
 use tower_http::services::ServeDir;
 use tower_http::timeout::TimeoutLayer;
-use axum::response::Redirect;
 
 mod app;
 mod filters;
@@ -30,9 +30,20 @@ async fn main() {
     let db = PgPoolOptions::new()
         .max_connections(20)
         .connect_with(settings.db_options.clone())
-        .await
-        .expect("Connnecting to database failed!");
-    sqlx::migrate!().run(&db).await.expect("Migration failed!");
+        .await;
+    let db = match db {
+        Ok(db) => match sqlx::migrate!().run(&db).await {
+            Ok(()) => Some(db),
+            Err(err) => {
+                error!("Database migrations failed; login/register disabled: {err}");
+                None
+            }
+        },
+        Err(err) => {
+            warn!("Database connection failed; login/register disabled: {err}");
+            None
+        }
+    };
 
     let router = Router::new()
         .merge(AuthRouter::build())
