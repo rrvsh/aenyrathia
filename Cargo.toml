@@ -33,3 +33,6 @@ style = "deny"
 pedantic = "deny"
 cargo = "deny"
 nursery = "deny"
+
+[dev-dependencies]
+tower = "0.5.2"
