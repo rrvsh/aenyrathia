@@ -140,7 +140,14 @@
       e.preventDefault();
       const path = document.getElementById("new_path").value.trim();
       if (path) {
-        window.location.href = "/" + path.replace(/^\/+/, "");
+        const prefix = "{{ prefix_path }}";
+        const cleanedPrefix = prefix.replace(/\/+$/, "");
+        const cleanedPath = path.replace(/^\/+/, "");
+        if (!cleanedPrefix) {
+          window.location.href = `/${cleanedPath}`;
+        } else {
+          window.location.href = `${cleanedPrefix}/${cleanedPath}`;
+        }
       }
     }
   </script>

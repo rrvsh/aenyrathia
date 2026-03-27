@@ -122,6 +122,16 @@ impl GitRemote {
         Some(paths)
     }
 
+    /// Return true when a remote branch exists for the given name.
+    pub fn branch_exists(&self, branch_name: &str) -> bool {
+        let repo = match Repository::open(&self.repo_directory) {
+            Ok(repo) => repo,
+            Err(_) => return false,
+        };
+        repo.find_reference(&format!("refs/remotes/origin/{branch_name}"))
+            .is_ok()
+    }
+
     /// Ensure remote is current, check out target branch, write, commit, and push content.
     pub fn write_file(
         &self,
@@ -269,6 +279,47 @@ fn collect_markdown_paths(
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GitRemote;
+    use git2::Repository;
+    use std::time::Duration;
+    use tempfile::tempdir;
+
+    #[test]
+    fn branch_exists_returns_true_for_remote_ref() {
+        let tempdir = tempdir().expect("tempdir");
+        let repo = Repository::init(tempdir.path()).expect("init repo");
+        let tree_id = repo
+            .treebuilder(None)
+            .expect("treebuilder")
+            .write()
+            .expect("tree");
+        let tree = repo.find_tree(tree_id).expect("tree");
+        let signature = git2::Signature::now("Tester", "tester@example.com").expect("signature");
+        let commit_oid = repo
+            .commit(Some("HEAD"), &signature, &signature, "initial", &tree, &[])
+            .expect("commit");
+        repo.reference(
+            "refs/remotes/origin/user/example",
+            commit_oid,
+            true,
+            "test ref",
+        )
+        .expect("reference");
+
+        let repo_directory = tempdir.path().to_path_buf();
+        let remote = GitRemote {
+            tempdir: std::sync::Arc::new(tempdir),
+            repo_directory,
+            sync_interval: Duration::from_millis(10),
+        };
+
+        assert!(remote.branch_exists("user/example"));
+        assert!(!remote.branch_exists("user/missing"));
     }
 }
 
