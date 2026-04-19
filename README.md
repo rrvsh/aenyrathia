@@ -3,5 +3,6 @@
 ## Development
 
 Lint and format with `just nice`
-Set up the local postgres development server with `just setup`.
-If you need to clear all data from the local machine, run `just reset`.
+Run the server with `just serve`.
+
+The app uses SQLite by default. Set `DATABASE_URL` to point at your database file if needed.
