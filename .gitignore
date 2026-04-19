@@ -6,3 +6,6 @@ result
 # Added by cargo
 
 **/target
+aenyrathia.dev.db
+aenyrathia.dev.db-shm
+aenyrathia.dev.db-wal
