@@ -1,0 +1,19 @@
+[Unit]
+Description=Aenyrathia wiki application
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aenyrathia
+Group=aenyrathia
+WorkingDirectory=/opt/aenyrathia/current
+EnvironmentFile=/etc/aenyrathia/aenyrathia.env
+ExecStart=/opt/aenyrathia/current/target/release/aenyrathia
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -20,11 +20,9 @@
               bacon
               cargo
               clippy
-              docker-compose
               just
               openssl
               pkg-config
-              postgresql
               rustc
               rustfmt
               sqlx-cli

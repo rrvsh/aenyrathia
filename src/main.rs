@@ -5,7 +5,7 @@ use axum::{Extension, Router, ServiceExt};
 use log::{error, info, warn};
 use routes::auth::AuthRouter;
 use routes::wiki::WikiRouter;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::sqlite::{SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use std::time::Duration;
 use tower_cookies::CookieManagerLayer;
 use tower_http::normalize_path::NormalizePath;
@@ -27,9 +27,16 @@ async fn main() {
     let mut builder = env_logger::Builder::from_env(env);
     builder.init();
 
-    let db = match PgPoolOptions::new()
-        .max_connections(20)
-        .connect_with(settings.db_options.clone())
+    let db_options = settings
+        .db_options
+        .clone()
+        .create_if_missing(true)
+        .journal_mode(SqliteJournalMode::Wal)
+        .synchronous(SqliteSynchronous::Normal)
+        .busy_timeout(Duration::from_secs(5));
+    let db = match SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect_with(db_options)
         .await
     {
         Ok(db) => match sqlx::migrate!().run(&db).await {
