@@ -7,7 +7,9 @@
 3. [Lore](/Lore) contains detailed information about the setting's world, people, phenomena, and locations.
 4. [Player Resources](/Player%20Resources) explains what we use to play the game.
 
-## [The world map of Aenyrathia](/static/Aenyrathia_World_Map_v1.png)
+## The World Map of Aenyrathia
+
+![The World Map of Aenyrathia](/static/Aenyrathia_World_Map_v1.png)
 
 <iframe src="https://app.fantasy-calendar.com/calendars/b8ba671bf13ea13ba98d3ae5dc8bd4fd" width=100% height=750px style="border: none;"></iframe>
 

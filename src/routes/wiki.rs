@@ -36,6 +36,7 @@ struct ArticleTemplate {
     edit_mode: bool,
     raw_file_content: String,
     current_path: String,
+    page_title: String,
     file_tree_html: String,
 }
 
@@ -83,6 +84,7 @@ pub async fn article_get(
     let current_slug = article_path
         .filter(|path| !path.is_empty())
         .unwrap_or_else(|| "Home".to_string());
+    let page_title = page_title(&current_slug);
 
     let file_content = state.remote.read_file(&relative_path, Some(&branch_name));
     let file_tree_paths = state
@@ -102,6 +104,7 @@ pub async fn article_get(
         edit_mode,
         raw_file_content,
         current_path: current_path.clone(),
+        page_title,
         file_tree_html,
     }
     .render()
@@ -176,6 +179,15 @@ pub async fn article_post(
         }
     } else {
         StatusCode::NO_CONTENT
+    }
+}
+
+fn page_title(current_slug: &str) -> String {
+    if current_slug == "Home" {
+        "Aenyrathia".to_string()
+    } else {
+        let title = current_slug.rsplit('/').next().unwrap_or(current_slug);
+        format!("Aenyrathia - {title}")
     }
 }
 
@@ -268,12 +280,16 @@ fn render_nodes(nodes: &[FileTreeNode], output: &mut String) {
             } else {
                 ""
             };
+            let mut summary_class = "file-tree__summary".to_string();
+            if node.is_current {
+                summary_class.push_str(" active");
+            }
             write!(
                 output,
-                "<details class=\"file-tree__dir\"{open_attr}><summary>"
+                "<details class=\"file-tree__dir\"{open_attr}><summary class=\"{summary_class}\">"
             )
             .expect("Error appending filetree to string.");
-            render_node_link(node, output);
+            render_node_link(node, output, true);
             output.push_str("</summary>");
             if !node.children.is_empty() {
                 output.push_str("<ul class=\"file-tree\">");
@@ -282,15 +298,18 @@ fn render_nodes(nodes: &[FileTreeNode], output: &mut String) {
             }
             output.push_str("</details>");
         } else {
-            render_node_link(node, output);
+            render_node_link(node, output, false);
         }
         output.push_str("</li>");
     }
 }
 
-fn render_node_link(node: &FileTreeNode, output: &mut String) {
+fn render_node_link(node: &FileTreeNode, output: &mut String, in_summary: bool) {
     let mut class = "file-tree__link".to_string();
-    if node.is_current {
+    if in_summary {
+        class.push_str(" file-tree__link--summary");
+    }
+    if node.is_current && !in_summary {
         class.push_str(" active");
     }
 

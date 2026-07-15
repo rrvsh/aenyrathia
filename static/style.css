@@ -538,14 +538,18 @@ a:hover {
 
 .file-tree__dir > summary {
   cursor: pointer;
-  position: relative;
-  padding: var(--space-3) var(--space-5) var(--space-3) calc(var(--space-8) + var(--space-2));
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
   border: 1px solid transparent;
   border-radius: var(--radius-sm);
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
 
+.file-tree__dir > summary::marker,
 .file-tree__dir > summary::-webkit-details-marker {
+  content: "";
   display: none;
 }
 
@@ -564,6 +568,11 @@ a:hover {
   box-shadow: 0 0 0 2px var(--color-focus-ring);
 }
 
+.file-tree__summary.active {
+  background: rgba(138, 180, 255, 0.15);
+  border-color: var(--color-accent);
+}
+
 .file-tree__link {
   display: block;
   padding: var(--space-3) var(--space-5);
@@ -572,9 +581,20 @@ a:hover {
   transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
 }
 
+.file-tree__link--summary {
+  display: inline;
+  flex: 1;
+  padding: 0;
+  border: 0;
+}
+
 .file-tree__link:hover {
   background: var(--color-surface);
   border-color: var(--color-border);
+}
+
+.file-tree__link--summary:hover {
+  background: transparent;
 }
 
 .file-tree__link:focus-visible {
@@ -591,23 +611,28 @@ a:hover {
 
 .file-tree__dir > summary::before {
   content: "▸";
-  position: absolute;
-  left: var(--space-4);
-  top: 50%;
-  transform: translateY(-50%);
+  display: inline-block;
   color: var(--color-accent);
   font-size: var(--text-sm);
+  line-height: 1;
   transition: transform var(--transition-fast);
 }
 
 .file-tree__dir[open] > summary::before {
-  transform: translateY(-50%) rotate(90deg);
+  transform: rotate(90deg);
 }
 
 .article__editor .form-control {
   width: 100%;
   min-height: 70vh;
   padding: var(--space-8);
+}
+
+.article img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
 }
 
 .article__preview {
