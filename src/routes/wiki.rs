@@ -196,7 +196,7 @@ fn build_file_tree(paths: &[String], current_slug: &str) -> Vec<FileTreeNode> {
 
     for path in paths {
         let slug_path = path.trim_end_matches(".md");
-        if slug_path.is_empty() {
+        if slug_path.is_empty() || slug_path == "Home" {
             continue;
         }
 
