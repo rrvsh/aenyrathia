@@ -1,1 +1,1 @@
-The New Dawn is a small group of technomancers who appear to want less regulation for spellcasters in [[Ilrinia|Lore/Locations/Aenyrathia/Desh/Ilrinia]]. They are led by Professor Lyra Valen, an accomplished technomancer who used to head the faculty of magitech in Miskatonic University.
+The New Dawn is a small group of technomancers who appear to want less regulation for spellcasters in [Ilrinia](/Lore/Locations/Aenyrathia/Desh/Ilrinia). They are led by Professor Lyra Valen, an accomplished technomancer who used to head the faculty of magitech in Miskatonic University.
