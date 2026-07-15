@@ -343,7 +343,7 @@ fn render_nodes(nodes: &[FileTreeNode], output: &mut String) {
     for node in nodes {
         output.push_str("<li class=\"file-tree__item\">");
         if node.is_dir {
-            let open_attr = if node.is_current_ancestor {
+            let open_attr = if node.is_current || node.is_current_ancestor {
                 " open"
             } else {
                 ""
