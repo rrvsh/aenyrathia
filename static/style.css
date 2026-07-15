@@ -503,12 +503,16 @@ a:hover {
 }
 
 .sidebar-toggle {
-  display: none;
-}
-
-.sidebar-toggle--not-found {
   display: inline-flex;
   margin-bottom: var(--space-6);
+}
+
+.page-grid--sidebar-hidden {
+  grid-template-columns: 1fr;
+}
+
+.sidebar.sidebar--hidden {
+  display: none;
 }
 
 .sidebar__header {
@@ -694,11 +698,6 @@ a:hover {
 
   .sidebar.sidebar--open {
     display: block;
-  }
-
-  .sidebar-toggle {
-    display: inline-flex;
-    margin-bottom: var(--space-6);
   }
 
   .article {

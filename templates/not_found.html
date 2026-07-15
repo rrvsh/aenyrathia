@@ -4,7 +4,7 @@
 
 {% block content %}
   <button
-    class="sidebar-toggle sidebar-toggle--not-found btn btn--ghost btn--small"
+    class="sidebar-toggle btn btn--ghost btn--small"
     type="button"
     id="sidebar_toggle"
     aria-controls="sidebar"
@@ -12,7 +12,7 @@
   >
     Toggle files
   </button>
-  <div class="page-grid">
+  <div class="page-grid" id="page_grid">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar__header">Index</div>
       {{ file_tree_html | safe }}
@@ -26,12 +26,26 @@
   <script>
     const sidebar = document.getElementById("sidebar");
     const sidebarToggle = document.getElementById("sidebar_toggle");
+    const pageGrid = document.getElementById("page_grid");
+
+    function sidebarStartsOpen() {
+      return window.matchMedia("(min-width: 901px)").matches;
+    }
+
+    function setSidebarExpanded(isOpen) {
+      if (!sidebar || !sidebarToggle) return;
+      sidebar.classList.toggle("sidebar--open", isOpen);
+      sidebar.classList.toggle("sidebar--hidden", !isOpen);
+      pageGrid?.classList.toggle("page-grid--sidebar-hidden", !isOpen);
+      sidebarToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
 
     function toggleSidebar() {
       if (!sidebar || !sidebarToggle) return;
-      const isOpen = sidebar.classList.toggle("sidebar--open");
-      sidebarToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+      setSidebarExpanded(sidebarToggle.getAttribute("aria-expanded") !== "true");
     }
+
+    setSidebarExpanded(sidebarStartsOpen());
 
     if (sidebarToggle) {
       sidebarToggle.addEventListener("click", toggleSidebar);
