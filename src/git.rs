@@ -6,7 +6,7 @@ use log::{trace, warn};
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 use tempfile::{TempDir, tempdir};
@@ -23,6 +23,7 @@ pub struct GitRemote {
     tempdir: Arc<TempDir>,
     repo_directory: PathBuf,
     sync_interval: Duration,
+    operation_lock: Arc<Mutex<()>>,
 }
 
 impl Clone for GitRemote {
@@ -31,6 +32,7 @@ impl Clone for GitRemote {
             tempdir: Arc::clone(&self.tempdir),
             repo_directory: self.repo_directory.clone(),
             sync_interval: self.sync_interval,
+            operation_lock: Arc::clone(&self.operation_lock),
         }
     }
 }
@@ -59,6 +61,7 @@ impl GitRemote {
                 .unwrap_or_else(|| repository.path())
                 .to_path_buf(),
             sync_interval,
+            operation_lock: Arc::new(Mutex::new(())),
         }
         .with_background_sync()
     }
@@ -93,7 +96,8 @@ impl GitRemote {
         let blob = repo.find_blob(entry.id()).ok()?;
         let blob_content = std::str::from_utf8(blob.content()).ok()?;
         trace!(
-            "blob content {blob_content} for path {relative_path} on ref {:?}",
+            "read {} bytes for path {relative_path} on ref {:?}",
+            blob.content().len(),
             reference.name()
         );
         Some(blob_content.to_string())
@@ -130,6 +134,7 @@ impl GitRemote {
         branch_name: Option<&str>,
         author: Option<&Author>,
     ) -> Result<(), ()> {
+        let _guard = self.operation_lock.lock().map_err(|_| ())?;
         let repo = Repository::open(&self.repo_directory).map_err(|_| ())?;
         let branch_name = branch_name.unwrap_or("prime");
 
@@ -174,7 +179,8 @@ impl GitRemote {
         }
         fs::write(&target_path, content).map_err(|_| ())?;
         trace!(
-            "Wrote {content} to file at path {} for branch refs/heads/{branch_name}.",
+            "Wrote {} bytes to file at path {} for branch refs/heads/{branch_name}.",
+            content.len(),
             target_path.display()
         );
 
@@ -213,6 +219,7 @@ impl GitRemote {
         let repo_directory = self.repo_directory.clone();
         let tempdir = Arc::clone(&self.tempdir);
         let interval = self.sync_interval;
+        let operation_lock = Arc::clone(&self.operation_lock);
         thread::Builder::new()
             .name("git-sync-worker".to_string())
             .spawn(move || {
@@ -221,7 +228,11 @@ impl GitRemote {
                 let max_backoff = Duration::from_secs(30);
                 let mut backoff = interval;
                 loop {
-                    match sync_once(&repo_directory) {
+                    match operation_lock
+                        .lock()
+                        .map_err(|_| git2::Error::from_str("git operation lock poisoned"))
+                        .and_then(|_guard| sync_once(&repo_directory))
+                    {
                         Ok(()) => {
                             backoff = interval;
                             thread::sleep(interval);
@@ -272,13 +283,18 @@ fn collect_markdown_paths(
     }
 }
 
-/// Build SSH callbacks that always use the app key at `$HOME/.ssh/id_ed25519`.
+/// Build SSH callbacks using `GIT_SSH_KEY_PATH` or `$HOME/.ssh/id_ed25519`.
 fn ssh_callbacks<'cb>() -> RemoteCallbacks<'cb> {
     let mut callbacks = RemoteCallbacks::new();
-    let home = env::var("HOME").expect("HOME not set; required to locate SSH key");
+    let key_path = env::var("GIT_SSH_KEY_PATH").map_or_else(
+        |_| {
+            let home = env::var("HOME").expect("HOME not set; required to locate SSH key");
+            Path::new(&home).join(".ssh/id_ed25519")
+        },
+        PathBuf::from,
+    );
     callbacks.credentials(move |_url, username_from_url, _allowed_types| {
         let username = username_from_url.expect("username missing for SSH auth");
-        let key_path = Path::new(&home).join(".ssh/id_ed25519");
         Cred::ssh_key(username, None, &key_path, None)
     });
     callbacks
@@ -367,6 +383,10 @@ fn push_all_branches(repo: &Repository) -> Result<(), git2::Error> {
             .name()?
             .ok_or_else(|| git2::Error::from_str("Invalid branch name"))?
             .to_string();
+
+        if !branch_name.starts_with("user/") {
+            continue;
+        }
 
         let reference = branch.into_reference();
         let local_commit = reference.peel_to_commit()?;

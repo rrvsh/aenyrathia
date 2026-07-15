@@ -1,6 +1,9 @@
 use app::{settings, state};
-use axum::http::StatusCode;
-use axum::response::Redirect;
+use axum::body::Body;
+use axum::extract::DefaultBodyLimit;
+use axum::http::{HeaderValue, Request, StatusCode, header};
+use axum::middleware::{self, Next};
+use axum::response::Response;
 use axum::{Extension, Router, ServiceExt};
 use log::{error, info, warn};
 use routes::auth::AuthRouter;
@@ -50,8 +53,10 @@ async fn main() {
         .merge(AuthRouter::build())
         .merge(WikiRouter::build(state))
         .nest_service("/static", ServeDir::new("static"))
-        .fallback(redirect_to_index)
+        .fallback(not_found)
         .layer((
+            middleware::from_fn(add_response_headers),
+            DefaultBodyLimit::max(1024 * 1024),
             CookieManagerLayer::new(),
             TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, Duration::from_secs(10)),
             Extension(db),
@@ -64,6 +69,34 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn redirect_to_index() -> Redirect {
-    Redirect::to("/")
+async fn not_found() -> StatusCode {
+    StatusCode::NOT_FOUND
+}
+
+async fn add_response_headers(request: Request<Body>, next: Next) -> Response {
+    let is_static = request.uri().path().starts_with("/static/");
+    let mut response = next.run(request).await;
+    let headers = response.headers_mut();
+
+    headers.insert(
+        header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    headers.insert(
+        header::REFERRER_POLICY,
+        HeaderValue::from_static("same-origin"),
+    );
+    headers.insert(
+        header::X_FRAME_OPTIONS,
+        HeaderValue::from_static("SAMEORIGIN"),
+    );
+
+    if is_static {
+        headers.insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static("public, max-age=31536000, immutable"),
+        );
+    }
+
+    response
 }

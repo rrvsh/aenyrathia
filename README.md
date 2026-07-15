@@ -1,7 +1,35 @@
 # aenyrathia
 
+Git-backed wiki for the Aenyrathia setting.
+
 ## Development
 
-Lint and format with `just nice`
-Set up the local postgres development server with `just setup`.
-If you need to clear all data from the local machine, run `just reset`.
+Run checks:
+
+```sh
+just nice
+```
+
+Run locally with SQLite:
+
+```sh
+DATABASE_URL=sqlite://data/aenyrathia.sqlite3 cargo run
+```
+
+For local HTTP development, leave `COOKIE_SECURE` unset so login cookies work on `http://127.0.0.1:8080`.
+
+## Deployment notes
+
+For HTTPS deployments, set:
+
+```sh
+COOKIE_SECURE=true
+```
+
+This marks auth/CSRF cookies as Secure so browsers only send them over HTTPS.
+
+Use an explicit deploy database path, for example:
+
+```sh
+DATABASE_URL=sqlite:///var/lib/aenyrathia/aenyrathia.sqlite3
+```

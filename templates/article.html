@@ -7,11 +7,13 @@
     {% when Some with (val) %}
     <div class="header-actions">
       <span class="header-identity">Signed in as {{ val }}</span>
-      <form class="header-actions__form" method="post" action="/logout?redirect_to={{ current_path }}">
+      <form class="header-actions__form" method="post" action="/logout?redirect_to={{ current_path_query }}">
+        {% match csrf_token %}{% when Some with (token) %}<input type="hidden" name="csrf_token" value="{{ token }}">{% when None %}{% endmatch %}
         <button class="btn btn--ghost btn--small" type="submit">Logout</button>
       </form>
     </div>
-    <form class="header-actions__form" method="post" action="/edit-mode/toggle?redirect_to={{ current_path }}">
+    <form class="header-actions__form" method="post" action="/edit-mode/toggle?redirect_to={{ current_path_query }}">
+      {% match csrf_token %}{% when Some with (token) %}<input type="hidden" name="csrf_token" value="{{ token }}">{% when None %}{% endmatch %}
       <button class="btn btn--ghost btn--small" type="submit">
         {% if edit_mode %}
         Switch to public view
@@ -22,8 +24,8 @@
     </form>
     {% when None %}
     <div class="header-auth">
-      <a class="header-link" href="/login?redirect_to={{ current_path }}">Login</a>
-      <a class="header-link header-link--primary" href="/register?redirect_to={{ current_path }}">Register</a>
+      <a class="header-link" href="/login?redirect_to={{ current_path_query }}">Login</a>
+      <a class="header-link header-link--primary" href="/register?redirect_to={{ current_path_query }}">Register</a>
     </div>
   {% endmatch %}
 {% endblock %}
@@ -68,11 +70,13 @@
           hx-post="{{ current_path }}"
           hx-swap="none"
           hx-trigger="input delay:500ms"
+          hx-include="#editor,#csrf_token"
           hx-on::before-request="setEditStatus('saving')"
           hx-on::after-request="setEditStatus(event.detail.successful === false ? 'error' : 'success')"
           hx-on::response-error="setEditStatus('error')"
           hx-on::send-error="setEditStatus('error')"
         >{{ raw_file_content }}</textarea>
+        {% match csrf_token %}{% when Some with (token) %}<input id="csrf_token" type="hidden" name="csrf_token" value="{{ token }}">{% when None %}{% endmatch %}
         <div class="article__status">
           <span id="edit_status" class="status status--idle" aria-live="polite"></span>
         </div>

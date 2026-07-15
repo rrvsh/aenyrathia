@@ -9,7 +9,7 @@
 
 ## The World Map of Aenyrathia
 
-![The World Map of Aenyrathia](/static/Aenyrathia_World_Map_v1.png)
+[![The World Map of Aenyrathia](/static/Aenyrathia_World_Map_v1_preview.webp)](/static/Aenyrathia_World_Map_v1.png)
 
 [View the Fantasy Calendar](/Calendar)
 

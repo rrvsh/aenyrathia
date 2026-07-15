@@ -4,6 +4,7 @@
   <div class="auth-layout">
     <form class="form-card form-grid" method="post" action="/login?redirect_to={{ redirect_path }}">
       <h1>Login</h1>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <label class="form-label">
         Email
         <input class="form-control" required name="email" type="email" placeholder="rafiq@rrv.sh" autocomplete="email">

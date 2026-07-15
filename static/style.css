@@ -642,7 +642,7 @@ a:hover {
   background: var(--color-surface);
 }
 
-@media (max-width: var(--bp-medium)) {
+@media (max-width: 900px) {
   .container {
     padding: 0 var(--space-8);
   }

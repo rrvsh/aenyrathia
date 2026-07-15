@@ -1,16 +1,21 @@
 use crate::app::state::AppState;
 use crate::filters;
-use crate::formatting::{normalise_newlines, resolve_article_path, resolve_branch_name};
+use crate::formatting::{
+    HOME_PAGE, normalise_newlines, resolve_article_path, resolve_article_slug, resolve_branch_name,
+};
 use crate::git::Author;
+use crate::routes::auth::{current_user, safe_redirect_path, verify_csrf_cookie};
 use askama::Template;
+use axum::Extension;
 use axum::Router;
 use axum::extract::Form;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::response::{Html, IntoResponse, Redirect, Response};
+use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, post};
 use log::{error, trace};
 use serde::Deserialize;
+use sqlx::SqlitePool;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use tower_cookies::{Cookie, Cookies};
@@ -36,8 +41,10 @@ struct ArticleTemplate {
     edit_mode: bool,
     raw_file_content: String,
     current_path: String,
+    current_path_query: String,
     page_title: String,
     file_tree_html: String,
+    csrf_token: Option<String>,
 }
 
 #[derive(Clone)]
@@ -61,14 +68,22 @@ pub async fn article_get(
     cookies: Cookies,
     article_path: Option<Path<String>>,
     State(state): State<AppState>,
+    Extension(db): Extension<Option<SqlitePool>>,
 ) -> Result<Response, StatusCode> {
     let article_path = article_path.map(|Path(article_path)| article_path);
-    let full_name = cookies
-        .get("full_name")
-        .map(|cookie| cookie.value().to_string());
-    let current_path = String::from("/") + &article_path.clone().unwrap_or_default();
-    let relative_path = resolve_article_path(article_path.clone());
-    let edit_mode = if full_name.is_none() {
+    let current_slug =
+        resolve_article_slug(article_path.clone()).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let relative_path = resolve_article_path(article_path).map_err(|_| StatusCode::BAD_REQUEST)?;
+    let current_path = if current_slug == HOME_PAGE {
+        "/".to_string()
+    } else {
+        format!("/{}", encode_url_path(&current_slug))
+    };
+    let current_path_query = encode_query_value(&current_path);
+
+    let user = current_user(db.as_ref(), &cookies).await;
+    let full_name = user.as_ref().map(|user| user.full_name.clone());
+    let edit_mode = if user.is_none() {
         false
     } else {
         cookies
@@ -80,11 +95,7 @@ pub async fn article_get(
             })
             .unwrap_or(false)
     };
-    let branch_name = resolve_branch_name(Some(edit_mode), full_name.as_ref());
-    let current_slug = article_path
-        .filter(|path| !path.is_empty())
-        .unwrap_or_else(|| "Home".to_string());
-    let page_title = page_title(&current_slug);
+    let branch_name = resolve_branch_name(Some(edit_mode), user.as_ref().map(|user| &user.email));
 
     let file_content = state.remote.read_file(&relative_path, Some(&branch_name));
     let file_tree_paths = state
@@ -93,19 +104,22 @@ pub async fn article_get(
         .unwrap_or_default();
     let file_tree = build_file_tree(&file_tree_paths, &current_slug);
     let file_tree_html = render_file_tree_html(&file_tree);
-    let mut raw_file_content = String::new();
-    if let Some(file_content) = file_content {
-        raw_file_content = file_content;
-    } else if !edit_mode {
-        return Ok(Redirect::to("/").into_response());
-    }
+    let raw_file_content = match file_content {
+        Some(file_content) => file_content,
+        None if edit_mode => String::new(),
+        None => return Err(StatusCode::NOT_FOUND),
+    };
+    let page_title = page_title(&current_slug, &raw_file_content);
+
     ArticleTemplate {
         full_name,
         edit_mode,
         raw_file_content,
         current_path: current_path.clone(),
+        current_path_query,
         page_title,
         file_tree_html,
+        csrf_token: user.map(|user| user.csrf_token),
     }
     .render()
     .map_or_else(
@@ -120,6 +134,7 @@ pub async fn article_get(
 #[derive(Deserialize)]
 pub struct EditForm {
     markdown: String,
+    csrf_token: Option<String>,
 }
 
 pub async fn preview_markdown(Form(form): Form<EditForm>) -> Html<String> {
@@ -131,7 +146,25 @@ pub struct RedirectQuery {
     redirect_to: Option<String>,
 }
 
-pub async fn toggle_edit_mode(cookies: Cookies, Query(params): Query<RedirectQuery>) -> Redirect {
+#[derive(Deserialize)]
+pub struct CsrfForm {
+    csrf_token: String,
+}
+
+pub async fn toggle_edit_mode(
+    cookies: Cookies,
+    Query(params): Query<RedirectQuery>,
+    Extension(db): Extension<Option<SqlitePool>>,
+    Form(form): Form<CsrfForm>,
+) -> Result<impl IntoResponse, StatusCode> {
+    verify_csrf_cookie(&cookies, &form.csrf_token)?;
+    let user = current_user(db.as_ref(), &cookies)
+        .await
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    if user.csrf_token != form.csrf_token {
+        return Err(StatusCode::FORBIDDEN);
+    }
+
     let current = cookies
         .get("edit_mode")
         .and_then(|cookie| match cookie.value() {
@@ -145,50 +178,76 @@ pub async fn toggle_edit_mode(cookies: Cookies, Query(params): Query<RedirectQue
     updated.set_path("/");
     cookies.add(updated);
 
-    let redirect = params.redirect_to.unwrap_or_else(|| "/".to_string());
-    Redirect::to(&redirect)
+    Ok(axum::response::Redirect::to(&safe_redirect_path(
+        params.redirect_to,
+    )))
 }
 
 pub async fn article_post(
     article_path: Option<Path<String>>,
     State(state): State<AppState>,
     cookies: Cookies,
+    Extension(db): Extension<Option<SqlitePool>>,
     Form(form): Form<EditForm>,
 ) -> StatusCode {
+    let Some(user) = current_user(db.as_ref(), &cookies).await else {
+        return StatusCode::UNAUTHORIZED;
+    };
+    let Some(csrf_token) = form.csrf_token.as_deref() else {
+        return StatusCode::FORBIDDEN;
+    };
+    if verify_csrf_cookie(&cookies, csrf_token).is_err() || user.csrf_token != csrf_token {
+        return StatusCode::FORBIDDEN;
+    }
+
     let article_path = article_path.map(|Path(article_path)| {
         trace!("article path: {article_path}");
         article_path
     });
-    if let Some(full_name) = cookies.get("full_name") {
-        let relative_path = resolve_article_path(article_path);
-        trace!("file path: {relative_path}");
-        let branch_name = resolve_branch_name(Some(true), Some(&full_name.value().to_string()));
-        let content = normalise_newlines(&form.markdown);
-        let author = cookies.get("email").map(|email| Author {
-            name: full_name.value().to_string(),
-            email: email.value().to_string(),
-        });
-        match state.remote.write_file(
-            &relative_path,
-            &content,
-            Some(&branch_name),
-            author.as_ref(),
-        ) {
-            Ok(()) => StatusCode::NO_CONTENT,
-            Err(()) => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    } else {
-        StatusCode::NO_CONTENT
+    let Ok(relative_path) = resolve_article_path(article_path) else {
+        return StatusCode::BAD_REQUEST;
+    };
+    trace!("file path: {relative_path}");
+    let branch_name = resolve_branch_name(Some(true), Some(&user.email));
+    let content = normalise_newlines(&form.markdown);
+    let author = Author {
+        name: user.full_name,
+        email: user.email,
+    };
+    match state
+        .remote
+        .write_file(&relative_path, &content, Some(&branch_name), Some(&author))
+    {
+        Ok(()) => StatusCode::NO_CONTENT,
+        Err(()) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
-fn page_title(current_slug: &str) -> String {
-    if current_slug == "Home" {
-        "Aenyrathia".to_string()
-    } else {
-        let title = current_slug.rsplit('/').next().unwrap_or(current_slug);
-        format!("Aenyrathia - {title}")
+fn page_title(current_slug: &str, raw_file_content: &str) -> String {
+    if current_slug == HOME_PAGE {
+        return "Aenyrathia".to_string();
     }
+
+    let title = first_heading(raw_file_content).unwrap_or_else(|| {
+        current_slug
+            .rsplit('/')
+            .next()
+            .unwrap_or(current_slug)
+            .to_string()
+    });
+    format!("Aenyrathia - {title}")
+}
+
+fn first_heading(markdown: &str) -> Option<String> {
+    markdown.lines().find_map(|line| {
+        let line = line.trim_start();
+        let heading = line.strip_prefix("# ")?.trim();
+        if heading.is_empty() {
+            None
+        } else {
+            Some(heading.to_string())
+        }
+    })
 }
 
 fn build_file_tree(paths: &[String], current_slug: &str) -> Vec<FileTreeNode> {
@@ -196,7 +255,7 @@ fn build_file_tree(paths: &[String], current_slug: &str) -> Vec<FileTreeNode> {
 
     for path in paths {
         let slug_path = path.trim_end_matches(".md");
-        if slug_path.is_empty() || slug_path == "Home" {
+        if slug_path.is_empty() || slug_path == HOME_PAGE {
             continue;
         }
 
@@ -218,7 +277,7 @@ fn insert_path(parent: &mut TreeBuilderNode, segments: &[&str], slug_path: &str,
     if let Some((head, tail)) = segments.split_first() {
         let child = parent.children.entry((*head).to_string()).or_default();
         if tail.is_empty() {
-            child.href = Some(if slug_path == "Home" {
+            child.href = Some(if slug_path == HOME_PAGE {
                 "/".to_string()
             } else {
                 format!("/{}", encode_url_path(slug_path))
@@ -329,6 +388,19 @@ fn render_node_link(node: &FileTreeNode, output: &mut String, in_summary: bool) 
         )
         .expect("Error appending filetree to string.");
     }
+}
+
+fn encode_query_value(value: &str) -> String {
+    let mut encoded = String::new();
+    for byte in value.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b'/' => {
+                encoded.push(byte as char);
+            }
+            _ => write!(encoded, "%{byte:02X}").expect("Error appending encoded byte."),
+        }
+    }
+    encoded
 }
 
 fn encode_url_path(path: &str) -> String {

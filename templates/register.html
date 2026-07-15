@@ -4,6 +4,7 @@
   <div class="auth-layout">
     <form class="form-card form-grid" method="post" action="/register?redirect_to={{ redirect_path }}">
       <h1>Register</h1>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <p class="form-help">Note: Your full name and email will be used to author your changes.</p>
       <label class="form-label">
         Full Name
