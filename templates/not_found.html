@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found{% endblock %}
+
+{% block content %}
+  <button
+    class="sidebar-toggle sidebar-toggle--not-found btn btn--ghost btn--small"
+    type="button"
+    id="sidebar_toggle"
+    aria-controls="sidebar"
+    aria-expanded="false"
+  >
+    Toggle files
+  </button>
+  <div class="page-grid">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__header">Index</div>
+      {{ file_tree_html | safe }}
+    </aside>
+    <section class="not-found article--single">
+      <h1>Page not found</h1>
+      <p>The requested page does not exist.</p>
+      <a class="btn btn--primary" href="/">Back to home</a>
+    </section>
+  </div>
+  <script>
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebar_toggle");
+
+    function toggleSidebar() {
+      if (!sidebar || !sidebarToggle) return;
+      const isOpen = sidebar.classList.toggle("sidebar--open");
+      sidebarToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener("click", toggleSidebar);
+    }
+  </script>
+{% endblock %}

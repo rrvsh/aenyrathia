@@ -5,6 +5,7 @@ use crate::formatting::{
 };
 use crate::git::Author;
 use crate::routes::auth::{current_user, safe_redirect_path, verify_csrf_cookie};
+use crate::routes::errors::render_not_found;
 use askama::Template;
 use axum::Extension;
 use axum::Router;
@@ -107,7 +108,7 @@ pub async fn article_get(
     let raw_file_content = match file_content {
         Some(file_content) => file_content,
         None if edit_mode => String::new(),
-        None => return Err(StatusCode::NOT_FOUND),
+        None => return Ok(render_not_found(file_tree_html)),
     };
     let page_title = page_title(&current_slug, &raw_file_content);
 

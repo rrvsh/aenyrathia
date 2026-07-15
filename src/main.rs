@@ -7,6 +7,7 @@ use axum::response::Response;
 use axum::{Extension, Router, ServiceExt};
 use log::{error, info, warn};
 use routes::auth::AuthRouter;
+use routes::errors::not_found;
 use routes::wiki::WikiRouter;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::time::Duration;
@@ -67,10 +68,6 @@ async fn main() {
     let app = NormalizePath::trim_trailing_slash(router);
     let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn not_found() -> StatusCode {
-    StatusCode::NOT_FOUND
 }
 
 async fn add_response_headers(request: Request<Body>, next: Next) -> Response {
