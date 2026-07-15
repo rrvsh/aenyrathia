@@ -1,8 +1,11 @@
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqliteSynchronous};
+use std::str::FromStr;
+
 pub struct AppSettings {
     pub addr: String,
     pub git_remote: String,
     pub git_sync_interval_ms: u64,
-    pub db_options: sqlx::postgres::PgConnectOptions,
+    pub db_options: SqliteConnectOptions,
 }
 
 impl AppSettings {
@@ -16,22 +19,13 @@ impl AppSettings {
             .and_then(|v| v.parse::<u64>().ok())
             .filter(|v| *v > 0)
             .unwrap_or(1000);
-        let db_host = std::env::var("PGHOST").unwrap_or_else(|_| {
-            "/cloudsql/aenyrathia:asia-southeast1:aenyrathia-pgsql".to_string()
-        });
-        let db_port = std::env::var("PGPORT")
-            .ok()
-            .and_then(|v| v.parse::<u16>().ok())
-            .unwrap_or(5432);
-        let db_user = std::env::var("PGUSER").unwrap_or_else(|_| "rafiq".to_string());
-        let db_password = std::env::var("PGPASSWORD").unwrap_or_else(|_| "1234".to_string());
-        let db_name = std::env::var("PGDATABASE").unwrap_or_else(|_| "app_db".to_string());
-        let db_options = sqlx::postgres::PgConnectOptions::new()
-            .host(&db_host)
-            .port(db_port)
-            .username(&db_user)
-            .password(&db_password)
-            .database(&db_name);
+        let database_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "sqlite://aenyrathia.sqlite3".to_string());
+        let db_options = SqliteConnectOptions::from_str(&database_url)
+            .unwrap_or_else(|err| panic!("invalid DATABASE_URL `{database_url}`: {err}"))
+            .create_if_missing(true)
+            .journal_mode(SqliteJournalMode::Wal)
+            .synchronous(SqliteSynchronous::Normal);
 
         Self {
             git_remote,

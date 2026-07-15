@@ -1,6 +1,6 @@
 use argon2::{
     Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
 };
 use askama::Template;
 use axum::{
@@ -11,8 +11,9 @@ use axum::{
     routing::{get, post},
 };
 use log::error;
+use rand_core::OsRng;
 use serde::Deserialize;
-use sqlx::PgPool;
+use sqlx::{Row, SqlitePool};
 use tower_cookies::{Cookie, Cookies};
 
 pub struct AuthRouter {}
@@ -38,7 +39,7 @@ pub struct RedirectQuery {
 }
 
 pub async fn register_get(
-    Extension(db): Extension<Option<PgPool>>,
+    Extension(db): Extension<Option<SqlitePool>>,
     Query(params): Query<RedirectQuery>,
 ) -> Result<Html<String>, StatusCode> {
     if db.is_none() {
@@ -64,7 +65,7 @@ pub struct RegisterForm {
 }
 
 pub async fn register_post(
-    Extension(db): Extension<Option<PgPool>>,
+    Extension(db): Extension<Option<SqlitePool>>,
     Query(params): Query<RedirectQuery>,
     Form(form): Form<RegisterForm>,
 ) -> Result<Redirect, StatusCode> {
@@ -81,15 +82,13 @@ pub async fn register_post(
         .hash_password(password.as_bytes(), &salt)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    sqlx::query!(
-        "insert into user_data (full_name, email, password_hash) values ($1, $2, $3)",
-        fullname,
-        email,
-        password_hash.to_string(),
-    )
-    .execute(db)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    sqlx::query("insert into user_data (full_name, email, password_hash) values (?, ?, ?)")
+        .bind(fullname)
+        .bind(email)
+        .bind(password_hash.to_string())
+        .execute(db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
 
@@ -103,7 +102,7 @@ struct LoginTemplate {
 }
 
 pub async fn login_get(
-    Extension(db): Extension<Option<PgPool>>,
+    Extension(db): Extension<Option<SqlitePool>>,
     Query(params): Query<RedirectQuery>,
 ) -> Result<Html<String>, StatusCode> {
     if db.is_none() {
@@ -128,7 +127,7 @@ pub struct LoginForm {
 }
 
 pub async fn login_post(
-    Extension(db): Extension<Option<PgPool>>,
+    Extension(db): Extension<Option<SqlitePool>>,
     cookies: Cookies,
     Query(params): Query<RedirectQuery>,
     Form(form): Form<LoginForm>,
@@ -137,21 +136,21 @@ pub async fn login_post(
 
     let LoginForm { email, password } = form;
 
-    let result = sqlx::query!(
-        "select full_name, password_hash from user_data where email=$1",
-        email
-    )
-    .fetch_one(db)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let result = sqlx::query("select full_name, password_hash from user_data where email = ?")
+        .bind(&email)
+        .fetch_one(db)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let full_name: String = result.get("full_name");
+    let password_hash: String = result.get("password_hash");
     let parsed_hash =
-        PasswordHash::new(&result.password_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        PasswordHash::new(&password_hash).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     if Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
         .is_ok()
     {
-        cookies.add(Cookie::new("full_name", result.full_name));
+        cookies.add(Cookie::new("full_name", full_name));
         cookies.add(Cookie::new("email", email));
         let redirect_path = params.redirect_to.unwrap_or_else(|| "/".to_string());
 
@@ -177,8 +176,8 @@ mod tests {
     use axum::body::Body;
     use axum::extract::Extension;
     use axum::http::{Method, Request, StatusCode};
-    use sqlx::PgPool;
-    use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+    use sqlx::SqlitePool;
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use tower::util::ServiceExt as _;
     use tower_cookies::CookieManagerLayer;
 
@@ -194,17 +193,11 @@ mod tests {
         }
     }
 
-    fn lazy_pool() -> PgPool {
-        let options = PgConnectOptions::new()
-            .host("localhost")
-            .port(1)
-            .username("unused")
-            .password("unused")
-            .database("unused");
-        PgPoolOptions::new().connect_lazy_with(options)
+    fn lazy_pool() -> SqlitePool {
+        SqlitePoolOptions::new().connect_lazy_with(SqliteConnectOptions::new())
     }
 
-    fn auth_app(db: Option<PgPool>) -> Router {
+    fn auth_app(db: Option<SqlitePool>) -> Router {
         AuthRouter::build()
             .layer(CookieManagerLayer::new())
             .layer(Extension(db))

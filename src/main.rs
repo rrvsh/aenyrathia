@@ -5,7 +5,7 @@ use axum::{Extension, Router, ServiceExt};
 use log::{error, info, warn};
 use routes::auth::AuthRouter;
 use routes::wiki::WikiRouter;
-use sqlx::postgres::PgPoolOptions;
+use sqlx::sqlite::SqlitePoolOptions;
 use std::time::Duration;
 use tower_cookies::CookieManagerLayer;
 use tower_http::normalize_path::NormalizePath;
@@ -21,14 +21,15 @@ mod routes;
 #[tokio::main]
 async fn main() {
     let settings = settings::AppSettings::from_env();
-    let state = state::AppState::init(&settings);
 
     let env = env_logger::Env::new().filter("PB_LOG");
     let mut builder = env_logger::Builder::from_env(env);
     builder.init();
 
-    let db = match PgPoolOptions::new()
-        .max_connections(20)
+    let state = state::AppState::init(&settings);
+
+    let db = match SqlitePoolOptions::new()
+        .max_connections(5)
         .connect_with(settings.db_options.clone())
         .await
     {

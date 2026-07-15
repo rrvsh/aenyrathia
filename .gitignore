@@ -1,6 +1,9 @@
 secrets/**
 .direnv
 result
+*.sqlite
+*.sqlite3
+*.sqlite3-*
 
 
 # Added by cargo
