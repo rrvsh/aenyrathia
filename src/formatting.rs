@@ -4,11 +4,11 @@ pub fn normalise_newlines(input: &str) -> String {
 }
 
 /// Resolves `{article_path}` to `wiki/{article_path}.md`.
-/// Defaults to `index` when `article_path` is `None` or empty.
+/// Defaults to `Home` when `article_path` is `None` or empty.
 pub fn resolve_article_path(article_path: Option<String>) -> String {
     let ensured_article_path = match article_path {
         Some(article_path) if !article_path.is_empty() => article_path,
-        _ => "index".to_string(),
+        _ => "Home".to_string(),
     };
     String::from("wiki/") + &ensured_article_path + ".md"
 }

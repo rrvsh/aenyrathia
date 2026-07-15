@@ -42,7 +42,7 @@ struct ArticleTemplate {
 #[derive(Clone)]
 struct FileTreeNode {
     name: String,
-    href: String,
+    href: Option<String>,
     is_dir: bool,
     children: Vec<FileTreeNode>,
     is_current: bool,
@@ -82,7 +82,7 @@ pub async fn article_get(
     let branch_name = resolve_branch_name(Some(edit_mode), full_name.as_ref());
     let current_slug = article_path
         .filter(|path| !path.is_empty())
-        .unwrap_or_else(|| "index".to_string());
+        .unwrap_or_else(|| "Home".to_string());
 
     let file_content = state.remote.read_file(&relative_path, Some(&branch_name));
     let file_tree_paths = state
@@ -120,7 +120,7 @@ pub struct EditForm {
 }
 
 pub async fn preview_markdown(Form(form): Form<EditForm>) -> Html<String> {
-    Html(markdown::to_html(&form.markdown))
+    Html(filters::render_markdown(&form.markdown))
 }
 
 #[derive(Deserialize)]
@@ -206,10 +206,10 @@ fn insert_path(parent: &mut TreeBuilderNode, segments: &[&str], slug_path: &str,
     if let Some((head, tail)) = segments.split_first() {
         let child = parent.children.entry((*head).to_string()).or_default();
         if tail.is_empty() {
-            child.href = Some(if slug_path == "index" {
+            child.href = Some(if slug_path == "Home" {
                 "/".to_string()
             } else {
-                format!("/{slug_path}")
+                format!("/{}", encode_url_path(slug_path))
             });
             child.is_current = is_current;
         } else {
@@ -230,10 +230,10 @@ fn tree_builder_to_template(name: &str, node: TreeBuilderNode) -> (FileTreeNode,
 
     sort_nodes(&mut children);
 
-    let is_dir = node.href.is_none();
+    let is_dir = !children.is_empty();
     let template_node = FileTreeNode {
         name: name.to_string(),
-        href: node.href.unwrap_or_default(),
+        href: node.href,
         is_dir,
         children,
         is_current: node.is_current,
@@ -270,10 +270,11 @@ fn render_nodes(nodes: &[FileTreeNode], output: &mut String) {
             };
             write!(
                 output,
-                "<details class=\"file-tree__dir\"{open_attr}><summary>{}</summary>",
-                escape_html(&node.name)
+                "<details class=\"file-tree__dir\"{open_attr}><summary>"
             )
             .expect("Error appending filetree to string.");
+            render_node_link(node, output);
+            output.push_str("</summary>");
             if !node.children.is_empty() {
                 output.push_str("<ul class=\"file-tree\">");
                 render_nodes(&node.children, output);
@@ -281,20 +282,47 @@ fn render_nodes(nodes: &[FileTreeNode], output: &mut String) {
             }
             output.push_str("</details>");
         } else {
-            let mut class = "file-tree__link".to_string();
-            if node.is_current {
-                class.push_str(" active");
-            }
-            write!(
-                output,
-                "<a href=\"{}\" class=\"{class}\">{}</a>",
-                escape_html(&node.href),
-                escape_html(&node.name)
-            )
-            .expect("Error appending filetree to string.");
+            render_node_link(node, output);
         }
         output.push_str("</li>");
     }
+}
+
+fn render_node_link(node: &FileTreeNode, output: &mut String) {
+    let mut class = "file-tree__link".to_string();
+    if node.is_current {
+        class.push_str(" active");
+    }
+
+    if let Some(href) = &node.href {
+        write!(
+            output,
+            "<a href=\"{}\" class=\"{class}\">{}</a>",
+            escape_html(href),
+            escape_html(&node.name)
+        )
+        .expect("Error appending filetree to string.");
+    } else {
+        write!(
+            output,
+            "<span class=\"{class}\">{}</span>",
+            escape_html(&node.name)
+        )
+        .expect("Error appending filetree to string.");
+    }
+}
+
+fn encode_url_path(path: &str) -> String {
+    let mut encoded = String::new();
+    for byte in path.bytes() {
+        match byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' | b'/' => {
+                encoded.push(byte as char);
+            }
+            _ => write!(encoded, "%{byte:02X}").expect("Error appending encoded byte."),
+        }
+    }
+    encoded
 }
 
 fn escape_html(input: &str) -> String {

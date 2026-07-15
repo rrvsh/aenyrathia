@@ -7,11 +7,15 @@
 3. [Lore](/Lore) contains detailed information about the setting's world, people, phenomena, and locations.
 4. [Player Resources](/Player%20Resources) explains what we use to play the game.
 
+## [The world map of Aenyrathia](/static/Aenyrathia_World_Map_v1.png)
+
+<iframe src="https://app.fantasy-calendar.com/calendars/b8ba671bf13ea13ba98d3ae5dc8bd4fd" width=100% height=750px style="border: none;"></iframe>
+
 ## User Guide
 
 To edit an existing page, open it and start typing in the editor; your changes are saved automatically as you go.
 
-If you want to add a new page, use the “New file path” field (for example, enter `characters/arma`), submit it, and then write your content in the editor that appears.
+If you want to add a new page, use the “New file path” field (for example, enter `Characters/Arma`), submit it, and then write your content in the editor that appears.
 
 Note: The file will not be created until you add something to the editor.
 
@@ -77,7 +81,3 @@ See the [home page](/) or jump to [Session 0](/Story%20So%20Far/The%20Watch/sess
 Rendered:
 
 See the [home page](/) or jump to [Session 0](/Story%20So%20Far/The%20Watch/session-0).
-
-## [The world map of Aenyrathia](/static/Aenyrathia_World_Map_v1.png)
-
-<iframe src="https://app.fantasy-calendar.com/calendars/b8ba671bf13ea13ba98d3ae5dc8bd4fd" width=100% height=750px style="border: none;"></iframe>

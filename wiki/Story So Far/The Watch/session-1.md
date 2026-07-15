@@ -4,9 +4,9 @@
 
 This episode was played at Rafiq and Haikal's apartment, and included the following players:
 
-- Haikal, playing [Thruggsahmigul](/characters/thruggsahmigul)
-- Toph, playing [Mayari Atum](/characters/mayari-atum)
-- Buzz, playing [Jonathan Clearwater](/characters/jonathan-clearwater)
+- Haikal, playing [Thruggsahmigul](/Characters/Thruggsahmigul)
+- Toph, playing [Mayari Atum](/Characters/Mayari%20Atum)
+- Buzz, playing [Jonathan Clearwater](/Characters/Jonathan%20Clearwater)
 
 This episode concluded in The Watch being formed after Sahm, Mayari, and Jon repelled an incursion that happened at Governor Ortlinde's mayoral rally. This incursion was the largest yet recorded in Ilrinia, but due to Aero, the Beacon, and the Swan showing up, the demon that came out of it was slain with no civilian casualties.
 
