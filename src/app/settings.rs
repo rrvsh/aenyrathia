@@ -7,6 +7,7 @@ pub struct AppSettings {
     pub git_remote: String,
     pub git_sync_interval_ms: u64,
     pub db_options: SqliteConnectOptions,
+    pub static_dir: String,
 }
 
 impl AppSettings {
@@ -20,6 +21,7 @@ impl AppSettings {
             .and_then(|v| v.parse::<u64>().ok())
             .filter(|v| *v > 0)
             .unwrap_or(1000);
+        let static_dir = std::env::var("STATIC_DIR").unwrap_or_else(|_| "static".to_string());
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| {
             let data_dir = std::env::var("DATA_DIR").unwrap_or_else(|_| "data".to_string());
             std::fs::create_dir_all(&data_dir)
@@ -38,6 +40,7 @@ impl AppSettings {
             addr: format!("{host}:{port}"),
             git_sync_interval_ms,
             db_options,
+            static_dir,
         }
     }
 }

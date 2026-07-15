@@ -52,7 +52,7 @@ async fn main() {
     let router = Router::new()
         .merge(AuthRouter::build())
         .merge(WikiRouter::build(state))
-        .nest_service("/static", ServeDir::new("static"))
+        .nest_service("/static", ServeDir::new(settings.static_dir.clone()))
         .fallback(not_found)
         .layer((
             middleware::from_fn(add_response_headers),
