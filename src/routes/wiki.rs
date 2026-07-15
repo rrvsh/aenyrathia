@@ -49,7 +49,7 @@ struct ArticleTemplate {
 }
 
 #[derive(Clone)]
-struct FileTreeNode {
+pub(crate) struct FileTreeNode {
     name: String,
     href: Option<String>,
     is_dir: bool,
@@ -108,7 +108,15 @@ pub async fn article_get(
     let raw_file_content = match file_content {
         Some(file_content) => file_content,
         None if edit_mode => String::new(),
-        None => return Ok(render_not_found(file_tree_html)),
+        None => {
+            return Ok(render_not_found(
+                file_tree_html,
+                full_name,
+                edit_mode,
+                current_path_query,
+                user.map(|user| user.csrf_token),
+            ));
+        }
     };
     let page_title = page_title(&current_slug, &raw_file_content);
 
@@ -251,7 +259,7 @@ fn first_heading(markdown: &str) -> Option<String> {
     })
 }
 
-fn build_file_tree(paths: &[String], current_slug: &str) -> Vec<FileTreeNode> {
+pub(crate) fn build_file_tree(paths: &[String], current_slug: &str) -> Vec<FileTreeNode> {
     let mut root = TreeBuilderNode::default();
 
     for path in paths {
@@ -323,7 +331,7 @@ fn sort_nodes(nodes: &mut [FileTreeNode]) {
     });
 }
 
-fn render_file_tree_html(nodes: &[FileTreeNode]) -> String {
+pub(crate) fn render_file_tree_html(nodes: &[FileTreeNode]) -> String {
     let mut output = String::new();
     output.push_str("<ul class=\"file-tree\">");
     render_nodes(nodes, &mut output);
@@ -391,7 +399,7 @@ fn render_node_link(node: &FileTreeNode, output: &mut String, in_summary: bool) 
     }
 }
 
-fn encode_query_value(value: &str) -> String {
+pub(crate) fn encode_query_value(value: &str) -> String {
     let mut encoded = String::new();
     for byte in value.bytes() {
         match byte {

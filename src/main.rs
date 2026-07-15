@@ -52,7 +52,7 @@ async fn main() {
 
     let router = Router::new()
         .merge(AuthRouter::build())
-        .merge(WikiRouter::build(state))
+        .merge(WikiRouter::build(state.clone()))
         .nest_service("/static", ServeDir::new(settings.static_dir.clone()))
         .fallback(not_found)
         .layer((
@@ -61,6 +61,7 @@ async fn main() {
             CookieManagerLayer::new(),
             TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, Duration::from_secs(10)),
             Extension(db),
+            Extension(state),
         ));
 
     info!("Starting app and listening on {}", &settings.addr);

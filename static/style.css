@@ -504,7 +504,21 @@ a:hover {
 
 .sidebar-toggle {
   display: inline-flex;
-  margin-bottom: var(--space-6);
+}
+
+.site-header .sidebar-toggle {
+  margin: 0;
+  padding: var(--space-5);
+}
+
+.sidebar-toggle__icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
 }
 
 .page-grid--sidebar-hidden {

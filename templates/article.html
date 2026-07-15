@@ -2,6 +2,21 @@
 
 {% block title %}{{ page_title }}{% endblock %}
 
+{% block header_brand %}
+  <button
+    class="sidebar-toggle btn btn--ghost btn--small"
+    type="button"
+    id="sidebar_toggle"
+    aria-controls="sidebar"
+    aria-expanded="false"
+    aria-label="Toggle files"
+  >
+    <svg class="sidebar-toggle__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  </button>
+{% endblock %}
+
 {% block header %}
   {% match full_name %}
     {% when Some with (val) %}
@@ -31,15 +46,6 @@
 {% endblock %}
 
 {% block content %}
-  <button
-    class="sidebar-toggle btn btn--ghost btn--small"
-    type="button"
-    id="sidebar_toggle"
-    aria-controls="sidebar"
-    aria-expanded="false"
-  >
-    Toggle files
-  </button>
   <div class="page-grid" id="page_grid">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar__header">Index</div>
