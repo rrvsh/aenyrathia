@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Page not found{% endblock %}
+
+{% block header_brand %}
+  <button
+    class="sidebar-toggle btn btn--ghost btn--small"
+    type="button"
+    id="sidebar_toggle"
+    aria-controls="sidebar"
+    aria-expanded="false"
+    aria-label="Toggle files"
+  >
+    <svg class="sidebar-toggle__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  </button>
+{% endblock %}
+
+{% block header %}
+  {% match full_name %}
+    {% when Some with (val) %}
+    <div class="header-actions">
+      <span class="header-identity">Signed in as {{ val }}</span>
+      <form class="header-actions__form" method="post" action="/logout?redirect_to={{ current_path_query }}">
+        {% match csrf_token %}{% when Some with (token) %}<input type="hidden" name="csrf_token" value="{{ token }}">{% when None %}{% endmatch %}
+        <button class="btn btn--ghost btn--small" type="submit">Logout</button>
+      </form>
+    </div>
+    <form class="header-actions__form" method="post" action="/edit-mode/toggle?redirect_to={{ current_path_query }}">
+      {% match csrf_token %}{% when Some with (token) %}<input type="hidden" name="csrf_token" value="{{ token }}">{% when None %}{% endmatch %}
+      <button class="btn btn--ghost btn--small" type="submit">
+        {% if edit_mode %}
+        Switch to public view
+        {% else %}
+        Switch to edit view
+        {% endif %}
+      </button>
+    </form>
+    {% when None %}
+    <div class="header-auth">
+      <a class="header-link" href="/login?redirect_to={{ current_path_query }}">Login</a>
+      <a class="header-link header-link--primary" href="/register?redirect_to={{ current_path_query }}">Register</a>
+    </div>
+  {% endmatch %}
+{% endblock %}
+
+{% block content %}
+  <div class="page-grid" id="page_grid">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__header">Index</div>
+      {{ file_tree_html | safe }}
+    </aside>
+    <section class="not-found article--single">
+      <h1>Page not found</h1>
+      <p>The requested page does not exist.</p>
+      <a class="btn btn--primary" href="/">Back to home</a>
+    </section>
+  </div>
+  <script>
+    const sidebar = document.getElementById("sidebar");
+    const sidebarToggle = document.getElementById("sidebar_toggle");
+    const pageGrid = document.getElementById("page_grid");
+
+    function sidebarStartsOpen() {
+      return window.matchMedia("(min-width: 901px)").matches;
+    }
+
+    function setSidebarExpanded(isOpen) {
+      if (!sidebar || !sidebarToggle) return;
+      sidebar.classList.toggle("sidebar--open", isOpen);
+      sidebar.classList.toggle("sidebar--hidden", !isOpen);
+      pageGrid?.classList.toggle("page-grid--sidebar-hidden", !isOpen);
+      sidebarToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    }
+
+    function toggleSidebar() {
+      if (!sidebar || !sidebarToggle) return;
+      setSidebarExpanded(sidebarToggle.getAttribute("aria-expanded") !== "true");
+    }
+
+    setSidebarExpanded(sidebarStartsOpen());
+
+    if (sidebarToggle) {
+      sidebarToggle.addEventListener("click", toggleSidebar);
+    }
+  </script>
+{% endblock %}

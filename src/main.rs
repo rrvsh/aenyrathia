@@ -7,6 +7,7 @@ use axum::response::Response;
 use axum::{Extension, Router, ServiceExt};
 use log::{error, info, warn};
 use routes::auth::AuthRouter;
+use routes::errors::not_found;
 use routes::wiki::WikiRouter;
 use sqlx::sqlite::SqlitePoolOptions;
 use std::time::Duration;
@@ -51,7 +52,7 @@ async fn main() {
 
     let router = Router::new()
         .merge(AuthRouter::build())
-        .merge(WikiRouter::build(state))
+        .merge(WikiRouter::build(state.clone()))
         .nest_service("/static", ServeDir::new(settings.static_dir.clone()))
         .fallback(not_found)
         .layer((
@@ -60,6 +61,7 @@ async fn main() {
             CookieManagerLayer::new(),
             TimeoutLayer::with_status_code(StatusCode::REQUEST_TIMEOUT, Duration::from_secs(10)),
             Extension(db),
+            Extension(state),
         ));
 
     info!("Starting app and listening on {}", &settings.addr);
@@ -67,10 +69,6 @@ async fn main() {
     let app = NormalizePath::trim_trailing_slash(router);
     let app = ServiceExt::<axum::extract::Request>::into_make_service(app);
     axum::serve(listener, app).await.unwrap();
-}
-
-async fn not_found() -> StatusCode {
-    StatusCode::NOT_FOUND
 }
 
 async fn add_response_headers(request: Request<Body>, next: Next) -> Response {
