@@ -11,7 +11,7 @@
 
 ![The World Map of Aenyrathia](/static/Aenyrathia_World_Map_v1.png)
 
-<iframe src="https://app.fantasy-calendar.com/calendars/b8ba671bf13ea13ba98d3ae5dc8bd4fd" width=100% height=750px style="border: none;"></iframe>
+[View the Fantasy Calendar](/Calendar)
 
 ## User Guide
 
