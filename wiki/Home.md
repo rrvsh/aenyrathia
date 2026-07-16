@@ -15,7 +15,7 @@
 
 ## User Guide
 
-To edit an existing page, open it and start typing in the editor; your changes are saved automatically as you go.
+To edit an existing page, open it and s      tart typing in the editor; your changes are saved automatically as you go.
 
 If you want to add a new page, use the “New file path” field (for example, enter `Characters/Arma`), submit it, and then write your content in the editor that appears.
 
